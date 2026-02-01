@@ -8,6 +8,7 @@ from app.common.constant import (
     STATUS_TO_CODE,
     VALIDATION_ERROR,
 )
+from app.common.schema import ErrorDetail, ErrorResponse
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -20,22 +21,15 @@ def register_exception_handlers(app: FastAPI) -> None:
         if isinstance(exc.detail, dict):
             message = exc.detail.get("message", str(exc.detail))
             code = exc.detail.get("code", code)
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
-                "success": False,
-                "error": {"message": str(message), "code": code},
-            },
-        )
+        body = ErrorResponse(error=ErrorDetail(message=str(message), code=code))
+        return JSONResponse(status_code=exc.status_code, content=body.model_dump())
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         errors = exc.errors()
         message = errors[0].get("msg", "입력값이 올바르지 않습니다") if errors else "입력값이 올바르지 않습니다"
+        body = ErrorResponse(error=ErrorDetail(message=message, code=VALIDATION_ERROR))
         return JSONResponse(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "success": False,
-                "error": {"message": message, "code": VALIDATION_ERROR},
-            },
+            content=body.model_dump(),
         )

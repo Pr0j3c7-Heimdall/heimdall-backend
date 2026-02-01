@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from app.auth.model import User  # noqa: F401 - 테이블 등록용
 from app.common.exception import register_exception_handlers
-from app.common.response import success_response
+from app.common.schema import SuccessResponse
 from app.database import get_db, init_db
 
 
@@ -35,23 +35,23 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get("/", response_model=SuccessResponse)
 async def root():
     """루트 엔드포인트"""
-    return success_response({"message": "Heimdall API에 오신 것을 환영합니다"})
+    return SuccessResponse(data={"message": "Heimdall API에 오신 것을 환영합니다"})
 
 
-@app.get("/health")
+@app.get("/health", response_model=SuccessResponse)
 async def health_check():
     """서버 상태 확인용 health check"""
-    return success_response({"status": "healthy"})
+    return SuccessResponse(data={"status": "healthy"})
 
 
-@app.get("/db-health")
+@app.get("/db-health", response_model=SuccessResponse)
 async def db_health_check(db: AsyncSession = Depends(get_db)):
     """DB 연결 상태 확인"""
     await db.execute(text("SELECT 1"))
-    return success_response({"status": "healthy", "database": "connected"})
+    return SuccessResponse(data={"status": "healthy", "database": "connected"})
 
 
 if __name__ == "__main__":
