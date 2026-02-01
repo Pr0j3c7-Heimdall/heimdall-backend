@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.auth.model import User  # noqa: F401 - 테이블 등록용
+from app.common.exception import register_exception_handlers
+from app.common.response import success_response
 from app.database import get_db, init_db
 
 
@@ -21,25 +24,34 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+register_exception_handlers(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 프로덕션에서는 특정 도메인으로 제한
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
 async def root():
     """루트 엔드포인트"""
-    return {"message": "Heimdall API에 오신 것을 환영합니다"}
+    return success_response({"message": "Heimdall API에 오신 것을 환영합니다"})
 
 
 @app.get("/health")
 async def health_check():
     """서버 상태 확인용 health check"""
-    return {"status": "healthy"}
+    return success_response({"status": "healthy"})
 
 
 @app.get("/db-health")
 async def db_health_check(db: AsyncSession = Depends(get_db)):
     """DB 연결 상태 확인"""
     await db.execute(text("SELECT 1"))
-    return {"status": "healthy", "database": "connected"}
+    return success_response({"status": "healthy", "database": "connected"})
 
 
 if __name__ == "__main__":
