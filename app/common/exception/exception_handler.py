@@ -1,0 +1,41 @@
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.common.constant import (
+    HTTP_422_UNPROCESSABLE_ENTITY,
+    STATUS_TO_CODE,
+    VALIDATION_ERROR,
+)
+
+
+def register_exception_handlers(app: FastAPI) -> None:
+    """공통 에러 핸들러 등록"""
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+        message = exc.detail
+        code = STATUS_TO_CODE.get(exc.status_code)
+        if isinstance(exc.detail, dict):
+            message = exc.detail.get("message", str(exc.detail))
+            code = exc.detail.get("code", code)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "success": False,
+                "error": {"message": str(message), "code": code},
+            },
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        errors = exc.errors()
+        message = errors[0].get("msg", "입력값이 올바르지 않습니다") if errors else "입력값이 올바르지 않습니다"
+        return JSONResponse(
+            status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "success": False,
+                "error": {"message": message, "code": VALIDATION_ERROR},
+            },
+        )
