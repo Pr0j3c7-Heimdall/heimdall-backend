@@ -29,7 +29,9 @@ def register_exception_handlers(app: FastAPI) -> None:
         else:
             message = "입력값이 올바르지 않습니다"
         body = ErrorResponse(
-            error=ErrorDetail(message=message, code=HTTP_422_UNPROCESSABLE_ENTITY.name)
+            error=ErrorDetail(
+                message=message, code=HTTP_422_UNPROCESSABLE_ENTITY.name
+            )
         )
         return JSONResponse(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,

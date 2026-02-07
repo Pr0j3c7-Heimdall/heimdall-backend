@@ -5,6 +5,7 @@ from starlette.exceptions import HTTPException
 from app.common.constant import (
     HTTP_400_BAD_REQUEST,
     HTTP_401_UNAUTHORIZED,
+    HTTP_403_FORBIDDEN,
     HTTP_404_NOT_FOUND,
 )
 
@@ -24,6 +25,10 @@ class BaseAppException(HTTPException):
             except ValueError:
                 code = "UNKNOWN"
         super().__init__(status_code=status_code, detail={"message": message, "code": code})
+        super().__init__(
+            status_code=status_code,
+            detail={"message": message, "code": code},
+        )
 
 
 class BadRequestException(BaseAppException):
@@ -34,6 +39,11 @@ class BadRequestException(BaseAppException):
 class UnauthorizedException(BaseAppException):
     def __init__(self, message: str = "인증이 필요합니다", code: Optional[str] = None):
         super().__init__(HTTP_401_UNAUTHORIZED, message, code)
+
+
+class ForbiddenException(BaseAppException):
+    def __init__(self, message: str = "접근 권한이 없습니다", code: Optional[str] = None):
+        super().__init__(HTTP_403_FORBIDDEN, message, code)
 
 
 class NotFoundException(BaseAppException):
