@@ -38,7 +38,7 @@ def _verify_google_token(id_token_str: str) -> dict | None:
             GOOGLE_CLIENT_ID,
         )
         return payload
-    except Exception:
+    except ValueError:
         return None
 
 
@@ -70,14 +70,14 @@ class AuthService:
         if not sub:
             return None
 
-        user = await self.user_repository.find_by_provider_sub("google", sub)
+        user = await self.user_repository.find_by_provider_sub(request.provider, sub)
         is_new_user = False
 
         if not user:
             user = await self.user_repository.create(
                 email=email,
                 name=name,
-                provider="google",
+                provider=request.provider,
                 provider_sub=sub,
             )
             is_new_user = True
