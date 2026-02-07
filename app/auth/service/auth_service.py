@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-from jose import jwt
+from google.oauth2 import id_token  # type: ignore[attr-defined]
+from google.auth.transport import requests as google_requests  # type: ignore[attr-defined]
+from jose import jwt  # type: ignore[attr-defined]
 
 from app.auth.model import User
 from app.auth.repository import RefreshTokenRepository, UserRepository
