@@ -10,3 +10,5 @@ aiomysql>=0.2.0
 # Auth
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
+google-auth>=2.0.0
+requests>=2.31.0
