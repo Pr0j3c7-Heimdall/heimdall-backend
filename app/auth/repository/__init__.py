@@ -1,1 +1,3 @@
-# Repository - 로그인 구현 시 추가
+from app.auth.repository.user_repository import UserRepository
+
+__all__ = ["UserRepository"]
