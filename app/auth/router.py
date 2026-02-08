@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import get_auth_service
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.schema import LoginRequest, RefreshRequest
+from app.auth.schema import LoginRequest, RefreshRequest, RefreshResponse
 from app.auth.service import AuthService
 from app.common.exception import BadRequestException, UnauthorizedException
 from app.common.schema import SuccessResponse
@@ -47,8 +47,8 @@ async def refresh(
 
     access_token, refresh_token = result
     return SuccessResponse(
-        data={
-            "accessToken": access_token,
-            "refreshToken": refresh_token,
-        }
+        data=RefreshResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+        ).model_dump(by_alias=True)
     )
