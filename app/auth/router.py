@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import get_auth_service
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.schema import LoginRequest
+from app.auth.schema import LoginRequest, RefreshRequest, RefreshResponse
 from app.auth.service import AuthService
 from app.common.exception import BadRequestException, UnauthorizedException
 from app.common.schema import SuccessResponse
@@ -32,4 +32,23 @@ async def login(
             "refreshToken": refresh_token,
             "isNewUser": is_new_user,
         }
+    )
+
+
+@router.post("/refresh", response_model=SuccessResponse)
+async def refresh(
+    request: RefreshRequest,
+    service: AuthService = Depends(get_auth_service),
+):
+    """액세스 토큰 재발급 (리프레시 토큰 사용, 토큰 로테이션)"""
+    result = await service.refresh(request)
+    if not result:
+        raise UnauthorizedException("유효하지 않거나 만료된 리프레시 토큰입니다")
+
+    access_token, refresh_token = result
+    return SuccessResponse(
+        data=RefreshResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+        ).model_dump(by_alias=True)
     )
