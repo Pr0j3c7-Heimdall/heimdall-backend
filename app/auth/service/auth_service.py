@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -8,21 +7,21 @@ from google.oauth2 import id_token  # type: ignore[attr-defined]
 from google.auth.transport import requests as google_requests  # type: ignore[attr-defined]
 from jose import jwt  # type: ignore[attr-defined]
 
+from app.auth.exception import ProviderNotSupportedError
 from app.auth.model import User
 from app.auth.repository import RefreshTokenRepository, UserRepository
 from app.auth.schema import LoginRequest
-
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+from app.config import get_auth_settings
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
 REFRESH_TOKEN_EXPIRE_DAYS = 14
 
 
 def create_access_token(user_id: int) -> str:
+    settings = get_auth_settings()
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
 def create_refresh_token() -> str:
@@ -31,11 +30,12 @@ def create_refresh_token() -> str:
 
 def _verify_google_token(id_token_str: str) -> dict | None:
     """구글 ID Token 검증, 성공 시 payload 반환"""
+    settings = get_auth_settings()
     try:
         payload = id_token.verify_oauth2_token(
             id_token_str,
             google_requests.Request(),
-            GOOGLE_CLIENT_ID,
+            settings.GOOGLE_CLIENT_ID,
         )
         return payload
     except ValueError:
@@ -57,7 +57,7 @@ class AuthService:
         Returns: (access_token, refresh_token, is_new_user) or None (인증 실패)
         """
         if request.provider != "google":
-            return None
+            raise ProviderNotSupportedError("현재 google만 지원합니다")
 
         payload = _verify_google_token(request.id_token)
         if not payload:
