@@ -11,8 +11,6 @@ from app.common.constant import (
 
 
 class BaseAppException(HTTPException):
-    """공통 에러 베이스 - message, code 지정해서 raise"""
-
     def __init__(
         self,
         status_code: int = HTTP_400_BAD_REQUEST,
@@ -26,6 +24,7 @@ class BaseAppException(HTTPException):
                 code = HTTPStatus(status_code).name
             except ValueError:
                 code = "UNKNOWN"
+        super().__init__(status_code=status_code, detail={"message": message, "code": code})
         super().__init__(
             status_code=status_code,
             detail={"message": message, "code": code},

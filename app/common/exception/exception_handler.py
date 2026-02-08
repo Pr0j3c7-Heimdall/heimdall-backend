@@ -8,8 +8,6 @@ from app.common.schema import ErrorDetail, ErrorResponse
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """공통 에러 핸들러 등록"""
-
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         message = exc.detail

@@ -1,1 +1,3 @@
-# Pydantic 스키마 - 로그인 구현 시 추가
+from app.auth.schema.login import LoginRequest, LoginResponse
+
+__all__ = ["LoginRequest", "LoginResponse"]

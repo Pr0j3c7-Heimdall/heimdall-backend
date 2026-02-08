@@ -1,20 +1,22 @@
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.model import User  # noqa: F401 - 테이블 등록용
+from app.auth.model import RefreshToken, User  # noqa: F401 - 테이블 등록용
+from app.auth.router import router as auth_router
 from app.common.exception import register_exception_handlers
 from app.common.schema import SuccessResponse
+from app.config import get_auth_settings, get_cors_settings
 from app.database import get_db, init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행"""
+    get_auth_settings()  # fail-fast: 환경 변수 검증
     await init_db()
     yield
 
@@ -25,15 +27,16 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
-register_exception_handlers(app)
-
+cors = get_cors_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=[o.strip() for o in cors.CORS_ORIGINS.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+register_exception_handlers(app)
+app.include_router(auth_router, prefix="/api/v1")
 
 
 @app.get("/", response_model=SuccessResponse)
@@ -59,7 +62,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app",
+        "app.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,

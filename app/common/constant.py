@@ -1,9 +1,5 @@
 """
 HTTP 규칙 상수
-- 2xx: 성공
-- 3xx: 리다이렉트
-- 4xx: 클라이언트 에러
-- 5xx: 서버 에러
 """
 
 from http import HTTPStatus
@@ -42,5 +38,4 @@ HTTP_502_BAD_GATEWAY = HTTPStatus.BAD_GATEWAY
 HTTP_503_SERVICE_UNAVAILABLE = HTTPStatus.SERVICE_UNAVAILABLE
 HTTP_504_GATEWAY_TIMEOUT = HTTPStatus.GATEWAY_TIMEOUT
 
-# status_code -> code (HTTPStatus.name)
 STATUS_TO_CODE = {s.value: s.name for s in HTTPStatus}
