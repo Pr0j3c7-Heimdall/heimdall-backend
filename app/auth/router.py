@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.exception import BadRequestException, UnauthorizedException
+from app.auth.exception import ProviderNotSupportedError
 from app.auth.repository import RefreshTokenRepository, UserRepository
+from app.common.exception import BadRequestException, UnauthorizedException
 from app.auth.schema import LoginRequest
 from app.auth.service import AuthService
 from app.common.schema import SuccessResponse
@@ -17,14 +18,15 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ):
     """구글 로그인 (겸 가입)"""
-    if request.provider != "google":
-        raise BadRequestException("현재 google만 지원합니다")
-
     user_repo = UserRepository(db)
     refresh_repo = RefreshTokenRepository(db)
     service = AuthService(user_repo, refresh_repo)
 
-    result = await service.login(request)
+    try:
+        result = await service.login(request)
+    except ProviderNotSupportedError as e:
+        raise BadRequestException(str(e)) from e
+
     if not result:
         raise UnauthorizedException("유효하지 않은 ID Token입니다")
 
