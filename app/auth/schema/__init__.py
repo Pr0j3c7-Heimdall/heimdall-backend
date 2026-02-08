@@ -1,8 +1,9 @@
-from app.auth.schema.login import (
-    LoginRequest,
-    LoginResponse,
-    RefreshRequest,
-    RefreshResponse,
-)
+from app.auth.schema.request import LoginRequest, RefreshRequest
+from app.auth.schema.response import LoginResponse, RefreshResponse
 
-__all__ = ["LoginRequest", "LoginResponse", "RefreshRequest", "RefreshResponse"]
+__all__ = [
+    "LoginRequest",
+    "LoginResponse",
+    "RefreshRequest",
+    "RefreshResponse",
+]
