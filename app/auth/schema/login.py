@@ -12,3 +12,16 @@ class LoginResponse(BaseModel):
     is_new_user: bool = Field(..., alias="isNewUser")
 
     model_config = {"populate_by_name": True}
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(..., alias="refreshToken", description="리프레시 토큰")
+
+    model_config = {"populate_by_name": True}
+
+
+class RefreshResponse(BaseModel):
+    access_token: str = Field(..., alias="accessToken")
+    refresh_token: str = Field(..., alias="refreshToken")
+
+    model_config = {"populate_by_name": True}
