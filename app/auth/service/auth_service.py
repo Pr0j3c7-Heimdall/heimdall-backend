@@ -10,7 +10,7 @@ from jose import jwt  # type: ignore[attr-defined]
 from app.auth.exception import ProviderNotSupportedError
 from app.auth.model import User
 from app.auth.repository import RefreshTokenRepository, UserRepository
-from app.auth.schema import LoginRequest
+from app.auth.schema import LoginRequest, RefreshRequest
 from app.config import get_auth_settings
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
@@ -92,3 +92,28 @@ class AuthService:
         )
 
         return access_token, refresh_token, is_new_user
+
+    async def refresh(self, request: RefreshRequest) -> tuple[str, str] | None:
+        """
+        액세스 토큰 재발급 (리프레시 토큰 검증 + 토큰 로테이션)
+        Returns: (access_token, refresh_token) or None (실패)
+        """
+        rt_entity = await self.refresh_token_repository.find_valid_by_token(
+            request.refresh_token
+        )
+        if not rt_entity:
+            return None
+
+        # 토큰 로테이션: 기존 삭제, 새로 발급
+        await self.refresh_token_repository.delete_by_token(request.refresh_token)
+
+        access_token = create_access_token(rt_entity.user_id)
+        new_refresh_token = create_refresh_token()
+        expires_at = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        await self.refresh_token_repository.create(
+            user_id=rt_entity.user_id,
+            token=new_refresh_token,
+            expires_at=expires_at,
+        )
+
+        return access_token, new_refresh_token
