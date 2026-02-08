@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import get_auth_service
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.repository import RefreshTokenRepository, UserRepository
-from app.common.exception import BadRequestException, UnauthorizedException
 from app.auth.schema import LoginRequest
 from app.auth.service import AuthService
+from app.common.exception import BadRequestException, UnauthorizedException
 from app.common.schema import SuccessResponse
-from app.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -15,12 +13,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=SuccessResponse)
 async def login(
     request: LoginRequest,
-    db: AsyncSession = Depends(get_db),
+    service: AuthService = Depends(get_auth_service),
 ):
     """구글 로그인 (겸 가입)"""
-    user_repo = UserRepository(db)
-    refresh_repo = RefreshTokenRepository(db)
-    service = AuthService(user_repo, refresh_repo)
 
     try:
         result = await service.login(request)
