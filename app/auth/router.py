@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import get_auth_service
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.schema import LoginRequest, RefreshRequest, RefreshResponse
+from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest, RefreshResponse
 from app.auth.service import AuthService
 from app.common.exception import BadRequestException, UnauthorizedException
 from app.common.schema import SuccessResponse
@@ -33,6 +33,16 @@ async def login(
             "isNewUser": is_new_user,
         }
     )
+
+
+@router.post("/logout", response_model=SuccessResponse)
+async def logout(
+    request: LogoutRequest,
+    service: AuthService = Depends(get_auth_service),
+):
+    """로그아웃 (refresh token 삭제, access token 블랙리스트 등록)"""
+    await service.logout(request)
+    return SuccessResponse(data=None)
 
 
 @router.post("/refresh", response_model=SuccessResponse)
