@@ -11,3 +11,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Setup Environment & Install Dependencies
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          
+          pip install -r requirements.txt
+          
+          cp .env.example .env
+          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=mysql+aiomysql://root:${{ secrets.DB_PASSWORD }}@localhost:3306/heimdall|g' .env
+
+      - name: Restart Uvicorn Server
+        run: |
+          source venv/bin/activate
+          
+          # 기존에 켜져 있는 서버가 있다면 강제 종료 (에러 무시)
+          pkill -f uvicorn || true
+          
+          # 백그라운드에서 서버 켜고, app.log에 로그 저장
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
