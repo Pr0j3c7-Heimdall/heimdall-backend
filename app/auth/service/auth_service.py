@@ -9,7 +9,6 @@ from jose import jwt  # type: ignore[attr-defined]
 from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.model import User
 from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository, UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
 from app.config import get_auth_settings
@@ -137,6 +136,6 @@ class AuthService:
                 exp = payload.get("exp")
                 if exp:
                     expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
-                    self.token_blacklist_repository.add(request.access_token, expires_at)
+                    await self.token_blacklist_repository.add(request.access_token, expires_at)
             except JWTError:
                 pass
