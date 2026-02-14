@@ -9,8 +9,8 @@ from jose import jwt  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
 from app.auth.model import User
-from app.auth.repository import RefreshTokenRepository, UserRepository
-from app.auth.schema import LoginRequest, RefreshRequest
+from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository, UserRepository
+from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
 from app.config import get_auth_settings
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
@@ -47,9 +47,11 @@ class AuthService:
         self,
         user_repository: UserRepository,
         refresh_token_repository: RefreshTokenRepository,
+        token_blacklist_repository: TokenBlacklistRepository,
     ):
         self.user_repository = user_repository
         self.refresh_token_repository = refresh_token_repository
+        self.token_blacklist_repository = token_blacklist_repository
 
     async def login(self, request: LoginRequest) -> tuple[str, str, bool] | None:
         """
@@ -117,3 +119,23 @@ class AuthService:
         )
 
         return access_token, new_refresh_token
+
+    async def logout(self, request: LogoutRequest) -> None:
+        """
+        로그아웃: refresh token 삭제 + access token 블랙리스트 등록 (추후 Redis)
+        """
+        await self.refresh_token_repository.delete_by_token(request.refresh_token)
+
+        if request.access_token:
+            try:
+                payload = jwt.decode(
+                    request.access_token,
+                    get_auth_settings().JWT_SECRET_KEY,
+                    algorithms=[ALGORITHM],
+                )
+                exp = payload.get("exp")
+                if exp:
+                    expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+                    self.token_blacklist_repository.add(request.access_token, expires_at)
+            except Exception:
+                pass
