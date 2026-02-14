@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from google.oauth2 import id_token  # type: ignore[attr-defined]
 from google.auth.transport import requests as google_requests  # type: ignore[attr-defined]
 from jose import jwt  # type: ignore[attr-defined]
+from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
 from app.auth.model import User
@@ -137,5 +138,5 @@ class AuthService:
                 if exp:
                     expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
                     self.token_blacklist_repository.add(request.access_token, expires_at)
-            except Exception:
+            except JWTError:
                 pass
