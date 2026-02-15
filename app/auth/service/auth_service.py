@@ -9,8 +9,9 @@ from jose import jwt  # type: ignore[attr-defined]
 from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.model import UserStatus
-from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository, UserRepository
+from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository
+from app.user.model import UserStatus
+from app.user.repository import UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
 from app.config import get_auth_settings
 ALGORITHM = "HS256"
