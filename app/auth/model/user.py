@@ -1,10 +1,12 @@
+from enum import Enum
+
 from sqlalchemy import BigInteger, Column, DateTime, String, UniqueConstraint
 from sqlalchemy.sql import func
 
 from app.database import Base
 
 
-class UserStatus:
+class UserStatus(str, Enum):
     ACTIVE = "ACTIVE"
     DELETED = "DELETED"
 
