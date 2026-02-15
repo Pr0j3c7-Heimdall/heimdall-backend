@@ -25,10 +25,6 @@ class BaseAppException(HTTPException):
             except ValueError:
                 code = "UNKNOWN"
         super().__init__(status_code=status_code, detail={"message": message, "code": code})
-        super().__init__(
-            status_code=status_code,
-            detail={"message": message, "code": code},
-        )
 
 
 class BadRequestException(BaseAppException):
