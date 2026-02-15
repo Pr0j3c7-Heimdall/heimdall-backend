@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.model import RefreshToken, User  # noqa: F401 - 테이블 등록용
+from app.auth.model import RefreshToken  # noqa: F401 - 테이블 등록용
+from app.user.model import User  # noqa: F401 - 테이블 등록용
 from app.auth.router import router as auth_router
+from app.user.router import router as user_router
 from app.common.exception import register_exception_handlers
 from app.common.schema import SuccessResponse
 from app.config import get_auth_settings, get_cors_settings
@@ -37,6 +39,7 @@ app.add_middleware(
 )
 register_exception_handlers(app)
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(user_router, prefix="/api/v1")
 
 
 @app.get("/", response_model=SuccessResponse)
