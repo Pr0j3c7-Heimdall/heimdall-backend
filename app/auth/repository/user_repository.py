@@ -42,3 +42,11 @@ class UserRepository:
             .where(User.id == user_id)
             .values(status=UserStatus.DELETED, deleted_at=now)
         )
+
+    async def restore(self, user_id: int) -> None:
+        """탈퇴한 계정 복구 (재가입)"""
+        await self.db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(status=UserStatus.ACTIVE, deleted_at=None)
+        )

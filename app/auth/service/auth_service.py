@@ -8,7 +8,7 @@ from google.auth.transport import requests as google_requests  # type: ignore[at
 from jose import jwt  # type: ignore[attr-defined]
 from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
-from app.auth.exception import AccountDeletedError, ProviderNotSupportedError
+from app.auth.exception import ProviderNotSupportedError
 from app.auth.model import UserStatus
 from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository, UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
@@ -77,7 +77,7 @@ class AuthService:
         is_new_user = False
 
         if user and user.status == UserStatus.DELETED:
-            raise AccountDeletedError("탈퇴한 계정입니다")
+            await self.user_repository.restore(user.id)
 
         if not user:
             user = await self.user_repository.create(

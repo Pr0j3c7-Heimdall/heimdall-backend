@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import get_auth_service, get_current_user_credentials
-from app.auth.exception import AccountDeletedError, ProviderNotSupportedError
+from app.auth.exception import ProviderNotSupportedError
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest, RefreshResponse
 from app.auth.service import AuthService
 from app.common.exception import BadRequestException, UnauthorizedException
@@ -19,7 +19,7 @@ async def login(
 
     try:
         result = await service.login(request)
-    except (ProviderNotSupportedError, AccountDeletedError) as e:
+    except ProviderNotSupportedError as e:
         raise BadRequestException(str(e)) from e
 
     if not result:
