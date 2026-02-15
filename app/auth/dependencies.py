@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.exception import UnauthorizedException
 from app.config import get_auth_settings
 
-from app.user.model import UserStatus
+from app.user.model import User, UserStatus
 from app.auth.repository import (
     NullTokenBlacklistRepository,
     RefreshTokenRepository,
@@ -37,8 +37,8 @@ async def get_current_user_credentials(
     credentials: HTTPAuthorizationCredentials = Depends(_http_bearer),
     user_repo: UserRepository = Depends(get_user_repository),
     token_blacklist_repo: TokenBlacklistRepository = Depends(get_token_blacklist_repository),
-) -> tuple[int, str]:
-    """JWT 검증 + 블랙리스트 + user status 확인 후 (user_id, access_token) 반환"""
+) -> tuple[User, str]:
+    """JWT 검증 + 블랙리스트 + user status 확인 후 (User, access_token) 반환"""
     try:
         payload = jwt.decode(
             credentials.credentials,
@@ -59,7 +59,7 @@ async def get_current_user_credentials(
     if not user or user.status == UserStatus.DELETED:
         raise UnauthorizedException("탈퇴한 계정입니다")
 
-    return user_id, credentials.credentials
+    return user, credentials.credentials
 
 
 def get_auth_service(
