@@ -1,7 +1,9 @@
-from sqlalchemy import select
+from datetime import datetime, timezone
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.model import User
+from app.auth.model import User, UserStatus
 
 
 class UserRepository:
@@ -28,3 +30,15 @@ class UserRepository:
         await self.db.flush()
         await self.db.refresh(user)
         return user
+
+    async def find_by_id(self, user_id: int) -> User | None:
+        result = await self.db.execute(select(User).where(User.id == user_id))
+        return result.scalar_one_or_none()
+
+    async def withdraw(self, user_id: int) -> None:
+        now = datetime.now(timezone.utc)
+        await self.db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(status=UserStatus.DELETED, deleted_at=now)
+        )
