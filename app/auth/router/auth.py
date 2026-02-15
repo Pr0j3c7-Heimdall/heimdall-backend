@@ -43,7 +43,7 @@ async def withdraw(
 ):
     """회원 탈퇴 (status=DELETED, deleted_at 기록)"""
     user, access_token = credentials
-    await service.withdraw(user.id, access_token)
+    await service.withdraw(user, access_token)
     return SuccessResponse(data=None)
 
 

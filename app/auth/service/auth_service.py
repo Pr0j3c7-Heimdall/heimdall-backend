@@ -10,7 +10,7 @@ from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
 from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository
-from app.user.model import UserStatus
+from app.user.model import User, UserStatus
 from app.user.repository import UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
 from app.config import get_auth_settings
@@ -144,15 +144,14 @@ class AuthService:
         except JWTError:
             pass
 
-    async def withdraw(self, user_id: int, access_token: str) -> None:
+    async def withdraw(self, user: User, access_token: str) -> None:
         """
         회원 탈퇴: refresh token 전체 삭제 + access token 블랙리스트 + user soft delete
         """
-        user = await self.user_repository.find_by_id(user_id)
-        if not user or user.status == UserStatus.DELETED:
+        if user.status == UserStatus.DELETED:
             return  # idempotent: 이미 탈퇴한 경우 무시
 
-        await self.refresh_token_repository.delete_by_user_id(user_id)
+        await self.refresh_token_repository.delete_by_user_id(user.id)
 
         try:
             payload = jwt.decode(
@@ -167,4 +166,4 @@ class AuthService:
         except JWTError:
             pass
 
-        await self.user_repository.withdraw(user_id)
+        await self.user_repository.withdraw(user.id)
