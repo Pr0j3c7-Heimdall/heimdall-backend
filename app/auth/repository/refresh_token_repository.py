@@ -39,3 +39,6 @@ class RefreshTokenRepository:
     async def delete_by_token(self, token: str) -> None:
         token_hash = self._hash_token(token)
         await self.db.execute(delete(RefreshToken).where(RefreshToken.token_hash == token_hash))
+
+    async def delete_by_user_id(self, user_id: int) -> None:
+        await self.db.execute(delete(RefreshToken).where(RefreshToken.user_id == user_id))

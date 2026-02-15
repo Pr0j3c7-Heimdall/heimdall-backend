@@ -9,6 +9,7 @@ from jose import jwt  # type: ignore[attr-defined]
 from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
+from app.auth.model import UserStatus
 from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository, UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
 from app.config import get_auth_settings
@@ -75,6 +76,9 @@ class AuthService:
         user = await self.user_repository.find_by_provider_sub(request.provider, sub)
         is_new_user = False
 
+        if user and user.status == UserStatus.DELETED:
+            await self.user_repository.restore(user.id)
+
         if not user:
             user = await self.user_repository.create(
                 email=email,
@@ -120,22 +124,46 @@ class AuthService:
 
         return access_token, new_refresh_token
 
-    async def logout(self, request: LogoutRequest) -> None:
+    async def logout(self, request: LogoutRequest, access_token: str) -> None:
         """
         로그아웃: refresh token 삭제 + access token 블랙리스트 등록 (추후 Redis)
         """
         await self.refresh_token_repository.delete_by_token(request.refresh_token)
 
-        if request.access_token:
-            try:
-                payload = jwt.decode(
-                    request.access_token,
-                    get_auth_settings().JWT_SECRET_KEY,
-                    algorithms=[ALGORITHM],
-                )
-                exp = payload.get("exp")
-                if exp:
-                    expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
-                    await self.token_blacklist_repository.add(request.access_token, expires_at)
-            except JWTError:
-                pass
+        try:
+            payload = jwt.decode(
+                access_token,
+                get_auth_settings().JWT_SECRET_KEY,
+                algorithms=[ALGORITHM],
+            )
+            exp = payload.get("exp")
+            if exp:
+                expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+                await self.token_blacklist_repository.add(access_token, expires_at)
+        except JWTError:
+            pass
+
+    async def withdraw(self, user_id: int, access_token: str) -> None:
+        """
+        회원 탈퇴: refresh token 전체 삭제 + access token 블랙리스트 + user soft delete
+        """
+        user = await self.user_repository.find_by_id(user_id)
+        if not user or user.status == UserStatus.DELETED:
+            return  # idempotent: 이미 탈퇴한 경우 무시
+
+        await self.refresh_token_repository.delete_by_user_id(user_id)
+
+        try:
+            payload = jwt.decode(
+                access_token,
+                get_auth_settings().JWT_SECRET_KEY,
+                algorithms=[ALGORITHM],
+            )
+            exp = payload.get("exp")
+            if exp:
+                expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+                await self.token_blacklist_repository.add(access_token, expires_at)
+        except JWTError:
+            pass
+
+        await self.user_repository.withdraw(user_id)
