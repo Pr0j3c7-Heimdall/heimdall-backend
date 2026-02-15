@@ -4,6 +4,11 @@ from sqlalchemy.sql import func
 from app.database import Base
 
 
+class UserStatus:
+    ACTIVE = "ACTIVE"
+    DELETED = "DELETED"
+
+
 class User(Base):
     __tablename__ = "users"  # 'user'는 MySQL 예약어이므로 users 사용
     __table_args__ = (UniqueConstraint("provider", "provider_sub", name="uq_provider_sub"),)
@@ -13,6 +18,7 @@ class User(Base):
     name = Column(String(255), nullable=False)
     provider = Column(String(50), nullable=False, default="google")
     provider_sub = Column(String(255), nullable=False)
-    password = Column(String(255), nullable=True)  # 소셜 로그인 시 NULL
+    status = Column(String(20), nullable=False, default=UserStatus.ACTIVE)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
