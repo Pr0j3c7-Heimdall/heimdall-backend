@@ -9,19 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.exception import UnauthorizedException
 from app.config import get_auth_settings
 
-from app.auth.model import UserStatus
+from app.user.model import UserStatus
 from app.auth.repository import (
     NullTokenBlacklistRepository,
     RefreshTokenRepository,
     TokenBlacklistRepository,
-    UserRepository,
 )
 from app.auth.service import AuthService
 from app.database import get_db
-
-
-def get_user_repository(db: AsyncSession = Depends(get_db)) -> UserRepository:
-    return UserRepository(db)
+from app.user.dependencies import get_user_repository
+from app.user.repository import UserRepository
 
 
 def get_refresh_token_repository(db: AsyncSession = Depends(get_db)) -> RefreshTokenRepository:
