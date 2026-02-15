@@ -11,9 +11,16 @@ class TokenBlacklistRepository(Protocol):
         """블랙리스트에 토큰 추가 (만료 시점까지 보관)"""
         ...
 
+    async def contains(self, token: str) -> bool:
+        """블랙리스트에 토큰 존재 여부"""
+        ...
+
 
 class NullTokenBlacklistRepository:
     """현재: no-op. 추후 RedisTokenBlacklistRepository로 교체"""
 
     async def add(self, token: str, expires_at: datetime) -> None:
         pass
+
+    async def contains(self, token: str) -> bool:
+        return False
