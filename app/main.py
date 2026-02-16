@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.model import RefreshToken, User  # noqa: F401 - 테이블 등록용
+from app.auth.model import RefreshToken, User
+from app.image.model import Image # Image 모델 임포트
 from app.auth.router import router as auth_router
+from app.image import base_router as image_base_router # 이미지 라우터 임포트
 from app.common.exception import register_exception_handlers
 from app.common.schema import SuccessResponse
 from app.config import get_auth_settings, get_cors_settings
@@ -37,6 +39,7 @@ app.add_middleware(
 )
 register_exception_handlers(app)
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(image_base_router, prefix="/api/v1") # 이미지 라우터 추가
 
 
 @app.get("/", response_model=SuccessResponse)

@@ -1,7 +1,9 @@
 from sqlalchemy import BigInteger, Column, DateTime, String, UniqueConstraint
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.image.model.image import Image # Image 모델 임포트
 
 
 class User(Base):
@@ -16,3 +18,5 @@ class User(Base):
     password = Column(String(255), nullable=True)  # 소셜 로그인 시 NULL
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    images = relationship("Image", back_populates="owner") # Image와의 관계 추가
