@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
-from app.image.model.image import Image # Image 모델 임포트
 
 
 class User(Base):
