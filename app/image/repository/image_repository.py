@@ -1,5 +1,6 @@
 import os
 import uuid
+from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
@@ -26,8 +27,8 @@ class ImageRepository:
         이미지 파일을 로컬 파일 시스템에 저장하고 데이터베이스에 Image 레코드를 생성함.
         """
         # 충돌 방지를 위한 고유 파일명 생성
-        file_extension = file.filename.split(".")[-1]
-        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_extension = Path(file.filename).suffix
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
         
         # 파일 관리를 위한 사용자별 하위 디렉토리 생성
         user_upload_dir = os.path.join(self.upload_base_dir, str(user_id))
@@ -45,15 +46,16 @@ class ImageRepository:
         image_url = f"{settings.BASE_URL}/uploads/{user_id}/{unique_filename}"
 
         # 데이터베이스에 이미지 메타데이터 생성 및 저장
+        # DB가 타임스탬프를 자동 관리하도록 created_at, updated_at 제거
         new_image = Image(
             user_id=user_id,
             filename=file.filename,
             filepath=file_path,
-            image_url=image_url,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            image_url=image_url
         )
         self.db_session.add(new_image)
+        await self.db_session.flush()
+        
         await self.db_session.commit()
         await self.db_session.refresh(new_image)
         return new_image

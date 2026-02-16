@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks, Form, File
-from app.image.dependencies import get_image_service, get_current_user_id
+from fastapi import APIRouter, Depends, UploadFile, BackgroundTasks, File
+
+from app.image.dependencies import get_image_service
+from app.auth.dependencies import get_current_user_id  # 경로 변경됨
 from app.image.service.image_service import ImageService
 from app.image.schema.response.upload import ImageUploadResponse, ImageUploadData
-from app.common.schema.response import SuccessResponse
 
 router = APIRouter(prefix="/images", tags=["images"])
 
