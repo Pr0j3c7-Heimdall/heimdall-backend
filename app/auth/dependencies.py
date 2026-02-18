@@ -2,8 +2,7 @@
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import jwt
-from jose.exceptions import JWTError
+from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exception import UnauthorizedException
@@ -20,6 +19,10 @@ from app.database import get_db
 from app.user.dependencies import get_user_repository
 from app.user.repository import UserRepository
 
+auth_settings = get_auth_settings()
+_ALGORITHM = "HS256"
+_http_bearer = HTTPBearer(auto_error=True)
+
 
 def get_refresh_token_repository(db: AsyncSession = Depends(get_db)) -> RefreshTokenRepository:
     return RefreshTokenRepository(db)
@@ -27,10 +30,6 @@ def get_refresh_token_repository(db: AsyncSession = Depends(get_db)) -> RefreshT
 
 def get_token_blacklist_repository() -> TokenBlacklistRepository:
     return NullTokenBlacklistRepository()
-
-
-_ALGORITHM = "HS256"
-_http_bearer = HTTPBearer(auto_error=True)
 
 
 async def get_current_user_credentials(
@@ -42,7 +41,7 @@ async def get_current_user_credentials(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            get_auth_settings().JWT_SECRET_KEY,
+            auth_settings.JWT_SECRET_KEY,
             algorithms=[_ALGORITHM],
         )
         sub = payload.get("sub")
@@ -68,3 +67,19 @@ def get_auth_service(
     token_blacklist_repo: TokenBlacklistRepository = Depends(get_token_blacklist_repository),
 ) -> AuthService:
     return AuthService(user_repo, refresh_repo, token_blacklist_repo)
+
+
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(_http_bearer)
+) -> int:
+    """JWT 토큰에서 유저 ID만 추출 (이미지 업로드 등에서 사용)"""
+    token = credentials.credentials
+    credentials_exception = UnauthorizedException("인증 정보를 검증할 수 없습니다.")
+    try:
+        payload = jwt.decode(token, auth_settings.JWT_SECRET_KEY, algorithms=[_ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    return int(user_id)

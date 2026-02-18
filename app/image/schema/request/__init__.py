@@ -1,0 +1,1 @@
+from app.image.schema.request.upload import ImageUploadRequest

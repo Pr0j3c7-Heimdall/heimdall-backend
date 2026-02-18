@@ -52,6 +52,20 @@ class DatabaseSettings(BaseSettings):
     )
 
 
+class ImageSettings(BaseSettings):
+    """Image 관련 설정"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    UPLOAD_DIR: str = Field(..., min_length=1, description="이미지 업로드 디렉토리 경로")
+    BASE_URL: str = Field(..., min_length=1, description="이미지 제공을 위한 기본 URL")
+
+
 @lru_cache
 def get_auth_settings() -> AuthSettings:
     """Auth 설정 조회 (캐싱)"""
@@ -68,3 +82,9 @@ def get_cors_settings() -> CorsSettings:
 def get_db_settings() -> DatabaseSettings:
     """DB 설정 조회 (캐싱)"""
     return DatabaseSettings()
+
+
+@lru_cache
+def get_image_settings() -> ImageSettings:
+    """Image 설정 조회 (캐싱)"""
+    return ImageSettings()

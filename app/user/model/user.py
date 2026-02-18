@@ -1,6 +1,7 @@
 from enum import Enum
 
 from sqlalchemy import BigInteger, Column, DateTime, String, UniqueConstraint
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
@@ -24,3 +25,5 @@ class User(Base):
     deleted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    images = relationship("Image", back_populates="owner") # Image와의 관계 추가

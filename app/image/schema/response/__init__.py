@@ -1,0 +1,1 @@
+from app.image.schema.response.upload import ImageUploadResponse
