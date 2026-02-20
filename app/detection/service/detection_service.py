@@ -4,41 +4,32 @@ from app.detection.exception.detection_exception import AnalysisNotFoundExceptio
 from app.detection.schema.response.status import DetectionStatusData
 from app.detection.model.image_analysis_summary import AnalysisStatus
 
+import asyncio
+from datetime import datetime, timezone
+import logging
+from app.database import AsyncSessionLocal
+from app.detection.repository.detection_repository import DetectionRepository
+
 class DetectionService:
     def __init__(self, detection_repo: DetectionRepository, image_repo: ImageRepository):
         self.detection_repo = detection_repo
         self.image_repo = image_repo
 
     async def get_detection_status(self, image_id: int, user_id: int) -> DetectionStatusData:
-        # 이미지 조회 (권한 확인을 위해)
-        image = await self.image_repo.get_image_by_id(image_id)
-        if not image:
-             raise AnalysisNotFoundException()
-        
-        # 권한 확인 (본인이 업로드한 이미지만)
-        if image.user_id != user_id:
-             raise ForbiddenAccessException()
-
-        # 분석 요약 조회
-        summary = await self.detection_repo.get_analysis_summary_by_image_id(image_id)
-        if not summary:
-             raise AnalysisNotFoundException()
+        # Repository의 JOIN 메서드 단 한 번 호출 (권한 체크 및 상태 조회 동시 수행)
+        status = await self.image_repo.get_image_status_and_check_owner(image_id, user_id)
         
         return DetectionStatusData(
-             image_id=image_id,
-             analysis_status=summary.analysis_status
+            image_id=image_id,
+            analysis_status=status
         )
 
     async def run_ai_detection(self, image_id: int):
         """
         AI 분석 시뮬레이션: 10초 후 분석 완료(COMPLETED) 상태로 업데이트합니다.
         """
-        import asyncio
-        from datetime import datetime
-        from app.database import AsyncSessionLocal
-        from app.detection.repository.detection_repository import DetectionRepository
 
-        print(f"DEBUG: Starting AI detection simulation for image ID: {image_id}")
+        logging.info(f"DEBUG: Starting AI detection simulation for image ID: {image_id}")
         await asyncio.sleep(10)
 
         async with AsyncSessionLocal() as session:
@@ -46,7 +37,7 @@ class DetectionService:
             await repo.update_analysis_status(
                 image_id=image_id,
                 status=AnalysisStatus.COMPLETED,
-                completed_at=datetime.now()
+                completed_at=datetime.now(timezone.utc)
             )
         
-        print(f"DEBUG: AI detection simulation COMPLETED for image ID: {image_id}")
+        logging.info(f"DEBUG: AI detection simulation COMPLETED for image ID: {image_id}")

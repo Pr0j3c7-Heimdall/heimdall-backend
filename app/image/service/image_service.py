@@ -31,9 +31,6 @@ class ImageService:
         
         new_image = await self.image_repository.save_image_file(file, user_id)
         
-        # 파이프라인 관제탑 역할을 할 image_analysis_summary 테이블에 빈 행을 생성
-        await self.detection_repository.create_analysis_summary(new_image.id)
-        
         # 검증 도메인에 분석 시작을 위임
         background_tasks.add_task(self.detection_service.run_ai_detection, new_image.id)
         

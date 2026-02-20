@@ -23,7 +23,7 @@ class ImageAnalysisSummary(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True))
 
-    image = relationship("Image", backref="analysis_summary", uselist=False)
+    image = relationship("Image", back_populates="analysis_summary")
 
     def __repr__(self):
         return f"<ImageAnalysisSummary(image_id={self.image_id}, status='{self.analysis_status}')>"

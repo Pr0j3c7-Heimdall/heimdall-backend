@@ -11,7 +11,7 @@ from sqlalchemy.sql import func
 from fastapi import UploadFile
 
 from app.image.model.image import Image
-from app.image.model.image_analysis_summary import ImageAnalysisSummary
+from app.detection.model.image_analysis_summary import ImageAnalysisSummary
 from app.config import get_image_settings
 from app.image.exception.image_exception import ImageNotFoundException
 from app.image.exception.image_exception import ImageAccessDeniedException
@@ -81,46 +81,25 @@ class ImageRepository:
     
     async def get_image_status_and_check_owner(self, image_id: int, user_id: int) -> str:
         """
-        이미지 소유권을 확인하고 현재 분석 상태를 조회함.
+        이미지 소유권을 확인하고 현재 분석 상태를 조인(JOIN)하여 한 번에 조회함.
         """
-        # 이미지가 존재하는지 확인
-        stmt_img = select(Image).where(Image.id == image_id)
-        result_img = await self.db_session.execute(stmt_img)
-        image = result_img.scalars().first()
+        # Image와 ImageAnalysisSummary를 JOIN
+        stmt = (
+            select(Image, ImageAnalysisSummary.analysis_status)
+            .join(ImageAnalysisSummary, Image.id == ImageAnalysisSummary.image_id)
+            .where(Image.id == image_id)
+        )
+        result = await self.db_session.execute(stmt)
+        row = result.first()
         
-        if not image:
-            raise ImageNotFoundException(message="요청하신 이미지를 찾을 수 없습니다.")
+        # 이미지나 요약 정보가 아예 없는 경우
+        if not row:
+            raise ImageNotFoundException(message="요청하신 이미지 또는 분석 결과를 찾을 수 없습니다.")
+            
+        image, status = row
             
         # 소유자 확인
         if image.user_id != user_id:
             raise ImageAccessDeniedException()
             
-        # 분석 상태 조회
-        stmt_status = select(ImageAnalysisSummary.analysis_status).where(ImageAnalysisSummary.image_id == image_id)
-        result_status = await self.db_session.execute(stmt_status)
-        status = result_status.scalars().first()
-        
-        if not status:
-            # image_analysis_summary에 정보가 없는 경우
-            raise ImageNotFoundException(message="분석 결과를 찾을 수 없습니다.")
-            
         return status
-
-    async def update_image_status(self, image_id: int, new_status: str):
-        """
-        [임시/TODO] AI 검증 상태를 업데이트하는 메서드.
-        차후 실제 AI 파이프라인(Background Tasks) 연동 시 상태 변경을 위해 사용됩니다.
-        """
-        stmt = select(ImageAnalysisSummary).where(ImageAnalysisSummary.image_id == image_id)
-        result = await self.db_session.execute(stmt)
-        summary = result.scalars().first()
-        
-        if summary:
-            summary.analysis_status = new_status
-            
-            # 분석이 완료된 경우 완료 시간 기록
-            if new_status == "COMPLETED":
-                summary.completed_at = func.now()
-                
-            await self.db_session.commit()
-    

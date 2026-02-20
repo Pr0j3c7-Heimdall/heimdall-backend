@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy import update
 from app.detection.model.image_analysis_summary import ImageAnalysisSummary, AnalysisStatus
 
 class DetectionRepository:
@@ -22,9 +23,10 @@ class DetectionRepository:
 
     async def update_analysis_status(self, image_id: int, status: AnalysisStatus, **kwargs) -> None:
         """이미지 분석 상태 및 추가 필드(결과 등)를 업데이트함"""
-        summary = await self.get_analysis_summary_by_image_id(image_id)
-        if summary:
-            summary.analysis_status = status
-            for key, value in kwargs.items():
-                setattr(summary, key, value)
-            await self.db_session.commit()
+        stmt = (
+            update(ImageAnalysisSummary)
+            .where(ImageAnalysisSummary.image_id == image_id)
+            .values(analysis_status=status, **kwargs)
+        )
+        await self.db_session.execute(stmt)
+        await self.db_session.commit()
