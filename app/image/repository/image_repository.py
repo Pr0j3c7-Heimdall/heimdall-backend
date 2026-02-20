@@ -14,6 +14,7 @@ from app.image.model.image import Image
 from app.image.model.image_analysis_summary import ImageAnalysisSummary
 from app.config import get_image_settings
 from app.image.exception.image_exception import ImageNotFoundException
+from app.image.exception.image_exception import ImageAccessDeniedException
 
 settings = get_image_settings()
 
@@ -88,11 +89,10 @@ class ImageRepository:
         image = result_img.scalars().first()
         
         if not image:
-            raise ImageNotFoundException(message="요청하신 이미지를 찾을 수 없습니다.", code="NOT_FOUND")
+            raise ImageNotFoundException(message="요청하신 이미지를 찾을 수 없습니다.")
             
         # 소유자 확인
         if image.user_id != user_id:
-            from app.image.exception.image_exception import ImageAccessDeniedException
             raise ImageAccessDeniedException()
             
         # 분석 상태 조회
@@ -102,7 +102,7 @@ class ImageRepository:
         
         if not status:
             # image_analysis_summary에 정보가 없는 경우
-            raise ImageNotFoundException(message="분석 결과를 찾을 수 없습니다.", code="NOT_FOUND")
+            raise ImageNotFoundException(message="분석 결과를 찾을 수 없습니다.")
             
         return status
 

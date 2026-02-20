@@ -42,6 +42,7 @@ class ImageService:
 
         print(f"Running AI validation for image ID: {image_id}")
         await asyncio.sleep(60)
+        
 
         try:
             # 기존 세션과 충돌하지 않도록 async with로 새 세션을 열고 닫습니다.
