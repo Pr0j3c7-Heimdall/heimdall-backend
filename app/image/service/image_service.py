@@ -2,8 +2,11 @@ from typing import List
 from fastapi import UploadFile, BackgroundTasks
 
 from app.image.repository.image_repository import ImageRepository
+from app.detection.repository.detection_repository import DetectionRepository
+from app.detection.service.detection_service import DetectionService
 from app.image.model.image import Image
 from app.image.exception.image_exception import InvalidImageFileException
+from app.detection.model.image_analysis_summary import AnalysisStatus
 
 import magic
 
@@ -11,8 +14,10 @@ import magic
 ALLOWED_MIME_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
 
 class ImageService:
-    def __init__(self, image_repository: ImageRepository):
+    def __init__(self, image_repository: ImageRepository, detection_repository: DetectionRepository, detection_service: DetectionService):
         self.image_repository = image_repository
+        self.detection_repository = detection_repository
+        self.detection_service = detection_service
 
     async def upload_image(self, file: UploadFile, user_id: int, background_tasks: BackgroundTasks) -> Image:
         # 파일의 실제 데이터(바이트)를 조금 읽어서 MIME 타입 확인
@@ -28,12 +33,10 @@ class ImageService:
         
         new_image = await self.image_repository.save_image_file(file, user_id)
         
-        background_tasks.add_task(self._run_ai_validation, new_image.id)
+        # 파이프라인 관제탑 역할을 할 image_analysis_summary 테이블에 빈 행을 생성
+        await self.detection_repository.create_analysis_summary(new_image.id)
+        
+        # 검증 도메인에 분석 시작을 위임
+        background_tasks.add_task(self.detection_service.run_ai_detection, new_image.id)
         
         return new_image
-
-    async def _run_ai_validation(self, image_id: int):
-        print(f"Running AI validation for image ID: {image_id}")
-        import asyncio
-        await asyncio.sleep(5)
-        print(f"AI validation completed for image ID: {image_id}")
