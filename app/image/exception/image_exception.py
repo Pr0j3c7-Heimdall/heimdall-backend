@@ -12,3 +12,7 @@ class InvalidImageFileException(BaseAppException):
 class ImageNotFoundException(BaseAppException):
     def __init__(self, message: str = "이미지를 찾을 수 없습니다.", code: str = "IMAGE_NOT_FOUND"):
         super().__init__(HTTP_404_NOT_FOUND, message, code)
+
+class ImageAccessDeniedException(BaseAppException):
+    def __init__(self, message: str = "해당 리소스에 대한 접근 권한이 없습니다", code: str = "FORBIDDEN"):
+        super().__init__(403, message, code)
