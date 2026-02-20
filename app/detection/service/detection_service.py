@@ -40,17 +40,17 @@ class DetectionService:
             raise AnalysisNotFoundException(message="분석이 완료되지 않았거나 이미지를 찾을 수 없습니다.")
 
         c2pa_data = None
-        if hasattr(image, "c2pa_result") and image.c2pa_result:
+        if image.c2pa_result:
             c2pa_data = C2PAResultSchema(
-                C2PA_id=image.c2pa_result.id,
+                c2pa_id=image.c2pa_result.id,
                 is_c2pa_compliant=image.c2pa_result.is_c2pa_compliant,
                 signature_status=image.c2pa_result.signature_status,
                 generator_model=image.c2pa_result.generator_model,
-                require_ai_inference=image.c2pa_result.requires_ai_inference
+                requires_ai_inference=image.c2pa_result.requires_ai_inference
             )
 
         binary_results = []
-        if hasattr(image, "binary_results") and image.binary_results:
+        if image.binary_results:
             binary_results = [
                 BinaryResultSchema(
                     binary_id=res.id,
@@ -61,7 +61,7 @@ class DetectionService:
             ]
 
         multi_results = []
-        if hasattr(image, "multiclass_results") and image.multiclass_results:
+        if image.multiclass_results:
             multi_results = [
                 MultiResultSchema(
                     multi_id=res.id,
