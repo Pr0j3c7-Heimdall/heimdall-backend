@@ -4,7 +4,6 @@ from app.image.dependencies import get_image_service
 from app.auth.dependencies import get_current_user_id  # 경로 변경됨
 from app.image.service.image_service import ImageService
 from app.image.schema.response.upload import ImageUploadResponse, ImageUploadData
-from app.image.schema.response.status import ImageStatusResponse, ImageStatusData
 
 router = APIRouter(prefix="/images", tags=["images"])
 
@@ -24,23 +23,5 @@ async def upload_image(
             image_id=uploaded_image.id,
             image_url=uploaded_image.image_url,
             result="업로드 성공 및 AI 검증 시작"
-        )
-    )
-
-@router.get("/{image_id}/status", response_model=ImageStatusResponse)
-async def get_ai_detection_status(
-    image_id: int,
-    user_id: int = Depends(get_current_user_id),
-    image_service: ImageService = Depends(get_image_service),
-):
-    """
-    특정 이미지의 AI 검증 상태를 조회함.
-    """
-    status = await image_service.get_image_status(image_id, user_id)
-    return ImageStatusResponse(
-        success=True,
-        data=ImageStatusData(
-            image_id=image_id,
-            analysis_status=status
         )
     )
