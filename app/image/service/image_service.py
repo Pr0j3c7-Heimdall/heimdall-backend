@@ -1,4 +1,3 @@
-from typing import List
 from fastapi import UploadFile, BackgroundTasks
 
 from app.image.repository.image_repository import ImageRepository
@@ -6,7 +5,6 @@ from app.detection.repository.detection_repository import DetectionRepository
 from app.detection.service.detection_service import DetectionService
 from app.image.model.image import Image
 from app.image.exception.image_exception import InvalidImageFileException
-from app.detection.model.image_analysis_summary import AnalysisStatus
 
 import magic
 
