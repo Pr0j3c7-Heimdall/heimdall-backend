@@ -11,7 +11,7 @@ from sqlalchemy.sql import func
 from fastapi import UploadFile
 
 from app.image.model.image import Image
-from app.detection.model.image_analysis_summary import ImageAnalysisSummary
+from app.detection.image.model.image_final_detection_results import ImageFinalDetectionResult
 from app.config import get_image_settings
 from app.image.exception.image_exception import ImageNotFoundException
 from app.image.exception.image_exception import ImageAccessDeniedException
@@ -59,7 +59,7 @@ class ImageRepository:
         self.db_session.add(new_image)
         await self.db_session.flush()
         
-        initial_summary = ImageAnalysisSummary(
+        initial_summary = ImageFinalDetectionResult(
             image_id=new_image.id
         )
         self.db_session.add(initial_summary)
@@ -85,8 +85,8 @@ class ImageRepository:
         """
         # Image와 ImageAnalysisSummary를 JOIN
         stmt = (
-            select(Image, ImageAnalysisSummary.analysis_status)
-            .join(ImageAnalysisSummary, Image.id == ImageAnalysisSummary.image_id)
+            select(Image, ImageFinalDetectionResult.analysis_status)
+            .join(ImageFinalDetectionResult, Image.id == ImageFinalDetectionResult.image_id)
             .where(Image.id == image_id)
         )
         result = await self.db_session.execute(stmt)

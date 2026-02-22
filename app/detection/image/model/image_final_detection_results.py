@@ -10,8 +10,8 @@ class AnalysisStatus(str, Enum):
     MULTICLASS_PROCESSING = "MULTICLASS_PROCESSING"
     COMPLETED = "COMPLETED"
 
-class ImageAnalysisSummary(Base):
-    __tablename__ = "image_analysis_summary"
+class ImageFinalDetectionResult(Base):
+    __tablename__ = "image_final_detection_results"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     image_id = Column(BigInteger, ForeignKey("images.id", ondelete="CASCADE"), nullable=False, unique=True)

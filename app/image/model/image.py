@@ -19,7 +19,7 @@ class Image(Base):
     # 예시 (app/auth/model/user.py):
     # images = relationship("Image", back_populates="owner")
     owner = relationship("User", back_populates="images")
-    analysis_summary = relationship("ImageAnalysisSummary", back_populates="image", uselist=False, cascade="all, delete-orphan")
+    analysis_summary = relationship("ImageFinalDetectionResult", back_populates="image", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Image(id={self.id}, filename='{self.filename}', image_url='{self.image_url}')>"

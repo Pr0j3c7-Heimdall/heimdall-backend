@@ -1,0 +1,1 @@
+from .image_detection_repository import DetectionRepository
