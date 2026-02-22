@@ -10,7 +10,6 @@ class ImageBinaryDetectionResult(Base):
     detection_method = Column(String(50), nullable=False)
     confidence_score = Column(Float)
     result_json = Column(JSON)
-    analysis_timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
     # image 테이블과의 관계 (필요 시 양방향 참조를 위해 설정)
     image = relationship("Image", backref="binary_results")

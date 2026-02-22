@@ -11,6 +11,5 @@ class ImageMulticlassDetectionResult(Base):
     predicted_model = Column(String(100))
     confidence_score = Column(Float)
     result_json = Column(JSON)
-    analysis_timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
     image = relationship("Image", backref="multiclass_results")

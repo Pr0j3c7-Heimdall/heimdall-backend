@@ -52,9 +52,16 @@ class DetectionService:
             c2pa_data = C2PAResultSchema(
                 c2pa_id=image.c2pa_result.id,
                 is_c2pa_compliant=image.c2pa_result.is_c2pa_compliant,
-                signature_status=image.c2pa_result.signature_status,
-                generator_model=image.c2pa_result.generator_model,
-                requires_ai_inference=image.c2pa_result.requires_ai_inference
+                created_model=image.c2pa_result.created_model,
+                converted_model=image.c2pa_result.converted_model,
+                created_description=image.c2pa_result.created_description,
+                claim_generator=image.c2pa_result.claim_generator,
+                claim_generator_info_name=image.c2pa_result.claim_generator_info_name,
+                synth_id=image.c2pa_result.synth_id,
+                visible_watermark=image.c2pa_result.visible_watermark,
+                total_digital_source_type=image.c2pa_result.total_digital_source_type,
+                synth_id_digital_source_type=image.c2pa_result.synth_id_digital_source_type,
+                visible_watermark_digital_source_type=image.c2pa_result.visible_watermark_digital_source_type
             )
 
         binary_results = []
@@ -63,8 +70,8 @@ class DetectionService:
                 BinaryResultSchema(
                     binary_id=res.id,
                     detection_method=res.detection_method,
-                    is_detected=res.is_detected,
-                    confidence_score=res.confidence_score
+                    confidence_score=res.confidence_score,
+                    result_json=res.result_json,
                 ) for res in image.binary_results
             ]
 
@@ -75,7 +82,8 @@ class DetectionService:
                     multi_id=res.id,
                     detection_method=res.detection_method,
                     predicted_model=res.predicted_model,
-                    confidence_score=res.confidence_score
+                    confidence_score=res.confidence_score,
+                    result_json=res.result_json,
                 ) for res in image.multiclass_results
             ]
 
@@ -86,7 +94,7 @@ class DetectionService:
             final_ai_probability=summary.final_ai_probability,
             final_generator_model=summary.final_generator_model,
             completed_at=summary.completed_at,
-            C2PA=c2pa_data,
+            c2pa=c2pa_data,
             binary=binary_results,
             multi=multi_results
         )
