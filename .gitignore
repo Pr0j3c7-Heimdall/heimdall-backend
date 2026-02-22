@@ -62,3 +62,4 @@ logs/
 *.sqlite3
 *.sqlite
 uploads/
+*.md

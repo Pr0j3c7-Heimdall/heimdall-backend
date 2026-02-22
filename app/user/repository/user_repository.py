@@ -80,9 +80,9 @@ class UserRepository:
 
         # 필터링: result_type
         if result_type == "ai":
-            base_stmt = base_stmt.where(ImageFinalDetectionResult.final_is_ai == True)
+            base_stmt = base_stmt.where(ImageFinalDetectionResult.final_is_ai) 
         elif result_type == "real":
-            base_stmt = base_stmt.where(ImageFinalDetectionResult.final_is_ai == False)
+            base_stmt = base_stmt.where(ImageFinalDetectionResult.final_is_ai.is_(False))
 
         # 전체 개수 계산 (count용 쿼리)
         count_stmt = select(func.count()).select_from(base_stmt.subquery())
