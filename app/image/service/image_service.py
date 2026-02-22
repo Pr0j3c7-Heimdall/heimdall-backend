@@ -1,8 +1,8 @@
 from fastapi import UploadFile, BackgroundTasks
 
 from app.image.repository.image_repository import ImageRepository
-from app.detection.repository.detection_repository import DetectionRepository
-from app.detection.service.detection_service import DetectionService
+from app.detection.image.repository.image_detection_repository import DetectionRepository
+from app.detection.image.service.image_detection_service import DetectionService
 from app.image.model.image import Image
 from app.image.exception.image_exception import InvalidImageFileException
 

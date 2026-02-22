@@ -8,17 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.model import RefreshToken  # noqa: F401 - 테이블 등록용
 from app.user.model import User  # noqa: F401 - 테이블 등록용
 from app.image.model import Image  # noqa: F401 - 테이블 등록용
-from app.detection.model import (  # noqa: F401 - 테이블 등록용
-    ImageAnalysisSummary,
-    BinaryDetectionResult,
-    MulticlassDetectionResult,
-    C2paVerificationResult,
-)
+from app.detection.image.model.image_final_detection_results import ImageFinalDetectionResult  # noqa: F401 - 테이블 등록용
+from app.detection.image.model.image_binary_detection_results import ImageBinaryDetectionResult  # noqa: F401 - 테이블 등록용
+from app.detection.image.model.image_multiclass_detection_results import ImageMulticlassDetectionResult  # noqa: F401 - 테이블 등록용
+from app.detection.image.model.image_c2pa_analysis_results import ImageC2paAnalysisResult  # noqa: F401 - 테이블 등록용
 
 from app.auth.router import router as auth_router
 from app.user.router import router as user_router
 from app.image import base_router as image_base_router
-from app.detection.router import router as detection_router
+from app.detection import router as detection_router
 
 from app.common.exception import register_exception_handlers
 from app.common.schema import SuccessResponse

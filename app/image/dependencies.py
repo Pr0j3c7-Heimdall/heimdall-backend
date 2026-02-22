@@ -2,9 +2,9 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.image.repository.image_repository import ImageRepository
-from app.detection.repository.detection_repository import DetectionRepository
-from app.detection.service.detection_service import DetectionService
-from app.detection.dependencies import get_detection_service
+from app.detection.image.repository.image_detection_repository import DetectionRepository
+from app.detection.image.service.image_detection_service import DetectionService
+from app.detection.image.dependencies import get_detection_service
 from app.image.service.image_service import ImageService
 
 def get_image_repository(db: AsyncSession = Depends(get_db)) -> ImageRepository:
