@@ -31,7 +31,11 @@ class ImageService:
         
         new_image = await self.image_repository.save_image_file(file, user_id)
         
-        # 검증 도메인에 분석 시작을 위임
-        background_tasks.add_task(self.detection_service.run_ai_detection, new_image.id)
+        # 검증 도메인에 분석 시작을 위임 (이미지 ID와 파일 경로 전달)
+        background_tasks.add_task(
+            self.detection_service.run_ai_detection, 
+            image_id=new_image.id, 
+            image_path=new_image.filepath
+        )
         
         return new_image

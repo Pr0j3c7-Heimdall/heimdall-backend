@@ -79,3 +79,18 @@ class DetectionRepository:
             return "FORBIDDEN"
             
         return status
+
+    async def save_c2pa_result(self, image_id: int, data: dict) -> None:
+        """C2PA 분석 결과를 저장함"""
+        c2pa_result = ImageC2paAnalysisResult(image_id=image_id, **data)
+        self.db_session.add(c2pa_result)
+        await self.db_session.commit()
+
+    async def save_binary_result(self, image_id: int, data_list: list) -> None:
+        """이진 분류 결과들을 리스트 단위로 저장함"""
+        for data in data_list:
+            # DB 컬럼에 없는 is_detected 필드 제외
+            binary_data = {k: v for k, v in data.items() if k != "is_detected"}
+            binary_result = ImageBinaryDetectionResult(image_id=image_id, **binary_data)
+            self.db_session.add(binary_result)
+        await self.db_session.commit()

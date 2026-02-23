@@ -26,3 +26,13 @@ python-multipart>=0.0.18
 
 # Read binary data to identify image/audio files
 python-magic>=0.4.27
+
+# AI Models
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.35.0
+timm>=0.9.0
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+scipy>=1.11.0
+Pillow>=10.0.0

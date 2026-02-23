@@ -8,6 +8,7 @@ from ..schema.response.image_result import (
     MultiResultSchema
 )
 from ..model.image_final_detection_results import AnalysisStatus
+from app.ai_pipeline.image.image_pipeline import execute_image_pipeline
 
 import asyncio
 from datetime import datetime, timezone
@@ -48,20 +49,23 @@ class DetectionService:
             raise AnalysisNotFoundException(message="분석이 완료되지 않았거나 이미지를 찾을 수 없습니다.")
 
         c2pa_data = None
-        if image.c2pa_result:
+        # backref로 생성된 c2pa_result가 리스트로 반환될 수 있으므로 안전하게 처리
+        c2pa_obj = image.c2pa_result[0] if isinstance(image.c2pa_result, list) and len(image.c2pa_result) > 0 else image.c2pa_result
+        
+        if c2pa_obj and not isinstance(c2pa_obj, list):
             c2pa_data = C2PAResultSchema(
-                c2pa_id=image.c2pa_result.id,
-                is_c2pa_compliant=image.c2pa_result.is_c2pa_compliant,
-                created_model=image.c2pa_result.created_model,
-                converted_model=image.c2pa_result.converted_model,
-                created_description=image.c2pa_result.created_description,
-                claim_generator=image.c2pa_result.claim_generator,
-                claim_generator_info_name=image.c2pa_result.claim_generator_info_name,
-                synth_id=image.c2pa_result.synth_id,
-                visible_watermark=image.c2pa_result.visible_watermark,
-                total_digital_source_type=image.c2pa_result.total_digital_source_type,
-                synth_id_digital_source_type=image.c2pa_result.synth_id_digital_source_type,
-                visible_watermark_digital_source_type=image.c2pa_result.visible_watermark_digital_source_type
+                c2pa_id=c2pa_obj.id,
+                is_c2pa_compliant=c2pa_obj.is_c2pa_compliant,
+                created_model=c2pa_obj.created_model,
+                converted_model=c2pa_obj.converted_model,
+                created_description=c2pa_obj.created_description,
+                claim_generator=c2pa_obj.claim_generator,
+                claim_generator_info_name=c2pa_obj.claim_generator_info_name,
+                synth_id=c2pa_obj.synth_id,
+                visible_watermark=c2pa_obj.visible_watermark,
+                total_digital_source_type=c2pa_obj.total_digital_source_type,
+                synth_id_digital_source_type=c2pa_obj.synth_id_digital_source_type,
+                visible_watermark_digital_source_type=c2pa_obj.visible_watermark_digital_source_type
             )
 
         binary_results = []
@@ -99,20 +103,43 @@ class DetectionService:
             multi=multi_results
         )
 
-    async def run_ai_detection(self, image_id: int):
+    async def run_ai_detection(self, image_id: int, image_path: str):
         """
-        AI 분석 시뮬레이션: 10초 후 분석 완료(COMPLETED) 상태로 업데이트합니다.
+        AI 분석 파이프라인을 실행하고 결과를 단계별로 DB에 업데이트합니다.
         """
+        logging.info(f"DEBUG: Starting AI detection for image ID: {image_id}")
 
-        logging.info(f"DEBUG: Starting AI detection simulation for image ID: {image_id}")
-        await asyncio.sleep(10)
+        async def update_progress(status: str, data: dict = None):
+            """클로저를 통해 단계별 상태 및 결과를 DB에 반영"""
+            async with AsyncSessionLocal() as session:
+                repo = DetectionRepository(session)
+                # 1. 상태 업데이트
+                await repo.update_analysis_status(image_id=image_id, status=status)
+                
+                # 2. 결과가 있다면 저장
+                if data:
+                    if "c2pa" in data:
+                        await repo.save_c2pa_result(image_id=image_id, data=data["c2pa"])
+                    if "binary" in data:
+                        await repo.save_binary_result(image_id=image_id, data_list=data["binary"])
 
+        # 파이프라인 실행
+        pipeline_output = await execute_image_pipeline(
+            image_path=image_path, 
+            progress_callback=update_progress
+        )
+
+        # 최종 상태 및 결과 요약 업데이트
+        final_res = pipeline_output["final_result"]
         async with AsyncSessionLocal() as session:
             repo = DetectionRepository(session)
             await repo.update_analysis_status(
                 image_id=image_id,
                 status=AnalysisStatus.COMPLETED,
+                final_is_ai=final_res["final_is_ai"],
+                final_ai_probability=final_res["final_ai_probability"],
+                requires_multiclass=final_res["requires_multiclass"],
                 completed_at=datetime.now(timezone.utc)
             )
         
-        logging.info(f"DEBUG: AI detection simulation COMPLETED for image ID: {image_id}")
+        logging.info(f"DEBUG: AI detection COMPLETED for image ID: {image_id}")
