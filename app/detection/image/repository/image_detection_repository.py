@@ -94,3 +94,16 @@ class DetectionRepository:
             binary_result = ImageBinaryDetectionResult(image_id=image_id, **binary_data)
             self.db_session.add(binary_result)
         await self.db_session.commit()
+
+    async def save_multiclass_result(self, image_id: int, data_list: list) -> None:
+        """다중 분류 결과들을 리스트 단위로 저장함"""
+        for data in data_list:
+            multiclass_result = ImageMulticlassDetectionResult(
+                image_id=image_id,
+                detection_method=data.get("detection_method"),
+                predicted_model=data.get("predicted_model"),
+                confidence_score=data.get("confidence_score"),
+                result_json=data.get("result_json")
+            )
+            self.db_session.add(multiclass_result)
+        await self.db_session.commit()

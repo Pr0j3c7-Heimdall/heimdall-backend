@@ -122,6 +122,8 @@ class DetectionService:
                         await repo.save_c2pa_result(image_id=image_id, data=data["c2pa"])
                     if "binary" in data:
                         await repo.save_binary_result(image_id=image_id, data_list=data["binary"])
+                    if "multi" in data:
+                        await repo.save_multiclass_result(image_id=image_id, data_list=data["multi"])
 
         # 파이프라인 실행
         pipeline_output = await execute_image_pipeline(
