@@ -8,7 +8,7 @@ from .F3Net_models import DualStreamConvNeXt
 
 CLASS_NAMES = ["BigGAN", "Dalle-3", "Flux-1.1-pro", "Glide", "GPT-image-1", "Imagen-4.0", "Midjourney-V6", "Nano-Banana-Family", "SD3.5", "SDXL"]
 
-class F3NetMulticlassDetector:
+class F3NetMultiDetector:
     def __init__(self, weight_path: str):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.img_size = 256

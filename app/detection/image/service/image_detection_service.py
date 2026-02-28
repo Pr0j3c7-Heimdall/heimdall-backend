@@ -141,6 +141,7 @@ class DetectionService:
                 final_is_ai=final_res["final_is_ai"],
                 final_ai_probability=final_res["final_ai_probability"],
                 requires_multiclass=final_res["requires_multiclass"],
+                final_generator_model=final_res["final_generator_model"],
                 completed_at=datetime.now(timezone.utc)
             )
         

@@ -3,11 +3,11 @@ import torch
 import torchvision.transforms as T
 from PIL import Image
 from transformers import AutoModel
-from .DINOv3_mlp_model import DINOMlpClassifier
+from .DINOv3_model import DINOMlpClassifier
 
 CLASS_NAMES = ["BigGAN", "Dalle-3", "Flux-1.1-pro", "Glide", "GPT-image-1", "Imagen-4.0", "Midjourney-V6", "Nano-Banana-Family", "SD3.5", "SDXL"]
 
-class Dinov3MulticlassDetector:
+class Dinov3MultiDetector:
     def __init__(self, weight_path: str, crop_type: str = '5crop', res: int = 224):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.crop_type = crop_type

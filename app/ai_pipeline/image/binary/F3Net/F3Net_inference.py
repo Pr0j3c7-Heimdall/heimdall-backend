@@ -8,7 +8,7 @@ import importlib.util
 import sys
 
 # 하이픈(-)이 포함된 파일명을 임포트하기 위한 처리
-spec = importlib.util.spec_from_file_location("F3_Net_models", os.path.join(os.path.dirname(__file__), "F3-Net_models.py"))
+spec = importlib.util.spec_from_file_location("F3_Net_models", os.path.join(os.path.dirname(__file__), "F3Net_models.py"))
 f3_models = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(f3_models)
 DualStreamConvNeXt = f3_models.DualStreamConvNeXt
@@ -91,7 +91,7 @@ class F3NetBinaryDetector:
                 is_fake = bool(prob >= self.threshold)
                 
             return {
-                "detection_method": "F3-Net",
+                "detection_method": "F3Net",
                 "is_detected": is_fake,
                 "confidence_score": prob,
                 "result_json": {

@@ -3,7 +3,7 @@ import torch
 import torchvision.transforms as T
 from PIL import Image
 from transformers import AutoModel
-from .DINOv3_mlp_model import DINOMlpClassifier # 기존 파일 임포트
+from .DINOv3_model import DINOMlpClassifier # 기존 파일 임포트
 
 class Dinov3BinaryDetector:
     def __init__(self, weight_path: str, crop_type: str = '5crop', res: int = 224, threshold: float = 0.5):
@@ -69,7 +69,7 @@ class Dinov3BinaryDetector:
                 
             return {
                 # 테이블보고 판단
-                "detection_method": "DINOv3_MLP",
+                "detection_method": "DINOv3",
                 "is_detected": is_fake,
                 "confidence_score": fake_prob,
                 "result_json": {
