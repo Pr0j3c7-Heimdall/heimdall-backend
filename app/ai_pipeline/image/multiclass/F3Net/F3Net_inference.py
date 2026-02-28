@@ -1,3 +1,8 @@
+"""
+F3Net 다중 분류 추론 모듈
+Dual-Stream ConvNeXt 구조를 사용하여 이미지를 생성한 구체적인 AI 모델을 판별합니다.
+"""
+
 import os
 import cv2
 import torch
@@ -6,27 +11,37 @@ import scipy.fftpack as fftpack
 import torchvision.transforms.functional as TF
 from .F3Net_models import DualStreamConvNeXt
 
+# 분석 가능한 AI 모델 클래스 정의
 CLASS_NAMES = ["BigGAN", "Dalle-3", "Flux-1.1-pro", "Glide", "GPT-image-1", "Imagen-4.0", "Midjourney-V6", "Nano-Banana-Family", "SD3.5", "SDXL"]
 
 class F3NetMultiDetector:
+    """F3-Net 기반 AI 모델 판별기 클래스"""
+
     def __init__(self, weight_path: str):
+        """
+        판별기 초기화 및 모델 로드
+        :param weight_path: 학습된 다중 분류 가중치 경로 (.pth)
+        """
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.img_size = 256
         
-        # 1. 모델 로드 및 가중치 적용
+        # 1. 모델 로드 및 가중치 적용 (출력 클래스 10개)
         self.model = DualStreamConvNeXt(num_classes=10).to(self.device)
-        self.model.load_state_dict(torch.load(weight_path, map_location=self.device, weights_only=False))
+        self.model.load_state_dict(torch.load(weight_path, map_location=self.device, weights_only=True))
         self.model.eval()
 
-    def _dct_2d(self, x):
+    def _dct_2d(self, x: np.ndarray) -> np.ndarray:
+        """2D DCT 수행"""
         return fftpack.dct(fftpack.dct(x.T, norm='ortho').T, norm='ortho')
 
-    def _calculate_lfs(self, img_gray):
+    def _calculate_lfs(self, img_gray: np.ndarray) -> np.ndarray:
+        """LFS 계산"""
         dct = self._dct_2d(img_gray)
         log_spectrum = np.log(np.abs(dct) + 1e-12)
         return log_spectrum
 
-    def _calculate_fad(self, img_gray):
+    def _calculate_fad(self, img_gray: np.ndarray) -> np.ndarray:
+        """FAD 계산"""
         f = np.fft.fft2(img_gray)
         fshift = np.fft.fftshift(f)
         rows, cols = img_gray.shape
@@ -38,6 +53,7 @@ class F3NetMultiDetector:
         return np.abs(img_back)
 
     def _preprocess_image(self, image_path: str):
+        """이미지 로드 및 듀얼 스트림용 전처리 수행"""
         img = cv2.imread(image_path)
         if img is None:
             raise ValueError(f"Cannot read image: {image_path}")
@@ -61,12 +77,16 @@ class F3NetMultiDetector:
         return rgb_tensor.unsqueeze(0), lfs_tensor.unsqueeze(0), fad_tensor.unsqueeze(0)
 
     def predict(self, image_path: str) -> dict:
+        """이미지 분석을 통해 어떤 AI 모델이 생성했는지 추론합니다."""
         try:
+            # 전처리
             rgb, lfs, fad = self._preprocess_image(image_path)
             rgb, lfs, fad = rgb.to(self.device), lfs.to(self.device), fad.to(self.device)
             
             with torch.no_grad():
+                # 모델 추론
                 output = self.model(rgb, lfs, fad)
+                # Softmax를 통해 클래스별 확률 계산
                 probs = torch.softmax(output, dim=1)[0]
                 confidence, predicted_idx = torch.max(probs, dim=0)
                 predicted_model = CLASS_NAMES[predicted_idx.item()]

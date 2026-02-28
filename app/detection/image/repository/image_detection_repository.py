@@ -82,16 +82,32 @@ class DetectionRepository:
 
     async def save_c2pa_result(self, image_id: int, data: dict) -> None:
         """C2PA 분석 결과를 저장함"""
-        c2pa_result = ImageC2paAnalysisResult(image_id=image_id, **data)
+        c2pa_result = ImageC2paAnalysisResult(
+            image_id=image_id,
+            is_c2pa_compliant=data.get("is_c2pa_compliant"),
+            created_model=data.get("created_model"),
+            converted_model=data.get("converted_model"),
+            created_description=data.get("created_description"),
+            claim_generator=data.get("claim_generator"),
+            claim_generator_info_name=data.get("claim_generator_info_name"),
+            synth_id=data.get("synth_id"),
+            visible_watermark=data.get("visible_watermark"),
+            total_digital_source_type=data.get("total_digital_source_type"),
+            synth_id_digital_source_type=data.get("synth_id_digital_source_type"),
+            visible_watermark_digital_source_type=data.get("visible_watermark_digital_source_type")
+        )
         self.db_session.add(c2pa_result)
         await self.db_session.commit()
 
     async def save_binary_result(self, image_id: int, data_list: list) -> None:
         """이진 분류 결과들을 리스트 단위로 저장함"""
         for data in data_list:
-            # DB 컬럼에 없는 is_detected 필드 제외
-            binary_data = {k: v for k, v in data.items() if k != "is_detected"}
-            binary_result = ImageBinaryDetectionResult(image_id=image_id, **binary_data)
+            binary_result = ImageBinaryDetectionResult(
+                image_id=image_id,
+                detection_method=data.get("detection_method"),
+                confidence_score=data.get("confidence_score"),
+                result_json=data.get("result_json")
+            )
             self.db_session.add(binary_result)
         await self.db_session.commit()
 

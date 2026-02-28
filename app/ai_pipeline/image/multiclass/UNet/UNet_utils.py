@@ -44,7 +44,6 @@ class FeatureExtractor:
         if self.pipe.dtype == torch.float16:
             images_tensor = images_tensor.half()
 
-        # [수정] .sample() 대신 .mode() 적용하여 결정론적 특징 추출
         latents = self.vae.encode(images_tensor).latent_dist.mode()
         latents = latents * self.vae.config.scaling_factor
 
@@ -65,5 +64,4 @@ class FeatureExtractor:
 
         self.unet(latents, timesteps, encoder_hidden_states=encoder_hidden_states)
         
-        # [수정] numpy 변환 없이 순수 PyTorch Tensor 반환
         return self.features['decoder_16'].float().cpu()

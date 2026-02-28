@@ -1,52 +1,59 @@
+"""
+AI 이미지 검증 파이프라인 모듈
+C2PA 분석, 이진 분류(AI 여부), 다중 분류(생성 모델 판별) 프로세스를 제어합니다.
+"""
+
 import os
 import torch
 import asyncio
+import logging
 from typing import Optional, Callable, Dict, Any, List
 
-# AI 모델 임포트
+# --- AI 모델 임포트 ---
+
 # DINOv3 Binary
 try:
     from .binary.DINOv3.DINOv3_inference import Dinov3BinaryDetector
 except ImportError as e:
-    print(f"Import error (Dinov3BinaryDetector): {e}")
+    logging.error(f"Import error (Dinov3BinaryDetector): {e}", exc_info=True)
     Dinov3BinaryDetector = None
 
 # F3Net Binary
 try:
     from .binary.F3Net.F3Net_inference import F3NetBinaryDetector
 except ImportError as e:
-    print(f"Import error (F3NetBinaryDetector): {e}")
+    logging.error(f"Import error (F3NetBinaryDetector): {e}", exc_info=True)
     F3NetBinaryDetector = None
 
 # UNet Binary
 try:
     from .binary.UNet.UNet_inference import UNetBinaryDetector
 except ImportError as e:
-    print(f"Import error (UNetBinaryDetector): {e}")
+    logging.error(f"Import error (UNetBinaryDetector): {e}", exc_info=True)
     UNetBinaryDetector = None
 
 # DINOv3 Multiclass
 try:
     from .multiclass.DINOv3.DINOv3_inference import Dinov3MultiDetector
 except ImportError as e:
-    print(f"Import error (Dinov3MulticlassDetector): {e}")
+    logging.error(f"Import error (Dinov3MulticlassDetector): {e}", exc_info=True)
     Dinov3MulticlassDetector = None
 
 # F3Net Multiclass
 try:
     from .multiclass.F3Net.F3Net_inference import F3NetMultiDetector
 except ImportError as e:
-    print(f"Import error (F3NetMulticlassDetector): {e}")
-    F3NetMulticlassDetector = None
+    logging.error(f"Import error (F3NetMulticlassDetector): {e}", exc_info=True)
+    F3NetMultiDetector = None
 
 # UNet Multiclass
 try:
     from .multiclass.UNet.UNet_inference import UNetMultiDetector
 except ImportError as e:
-    print(f"Import error (UNetMulticlassDetector): {e}")
-    UNetMulticlassDetector = None
+    logging.error(f"Import error (UNetMulticlassDetector): {e}", exc_info=True)
+    UNetMultiDetector = None
 
-# 모델 가중치 경로
+# --- 모델 가중치 경로 설정 ---
 DINOV3_WEIGHTS = "app/ai_pipeline/image/binary/DINOv3/weights/DINOv3_binary.pth"
 F3NET_WEIGHTS = "app/ai_pipeline/image/binary/F3Net/weights/F3Net_binary.pth"
 UNET_BINARY_WEIGHTS = "app/ai_pipeline/image/binary/UNet/weights/UNet_binary.pth"
@@ -54,7 +61,7 @@ DINOV3_MULTI_WEIGHTS = "app/ai_pipeline/image/multiclass/DINOv3/weights/DINOv3_m
 F3NET_MULTI_WEIGHTS = "app/ai_pipeline/image/multiclass/F3Net/weights/F3Net_multi.pth"
 UNET_MULTI_WEIGHTS = "app/ai_pipeline/image/multiclass/UNet/weights/UNet_multi.pth"
 
-# 전역 변수로 모델 초기화
+# --- 전역 변수로 모델 인스턴스 초기화 ---
 dinov3_detector = None
 f3net_detector = None
 unet_detector = None
@@ -63,6 +70,7 @@ f3net_multi_detector = None
 unet_multi_detector = None
 
 def init_models():
+    """가중치 파일 존재 여부를 확인하여 각 AI 모델 인스턴스를 초기화합니다."""
     global dinov3_detector, f3net_detector, unet_detector, \
            dinov3_multi_detector, f3net_multi_detector, unet_multi_detector
     
@@ -71,48 +79,47 @@ def init_models():
         if Dinov3BinaryDetector and os.path.exists(DINOV3_WEIGHTS):
             dinov3_detector = Dinov3BinaryDetector(weight_path=DINOV3_WEIGHTS)
     except Exception as e:
-        print(f"Error initializing Binary DINOv3: {e}")
+        logging.error(f"Error initializing Binary DINOv3: {e}", exc_info=True)
 
     # 2. Binary F3-Net
     try:
         if F3NetBinaryDetector and os.path.exists(F3NET_WEIGHTS):
             f3net_detector = F3NetBinaryDetector(weight_path=F3NET_WEIGHTS)
     except Exception as e:
-        print(f"Error initializing Binary F3-Net: {e}")
+        logging.error(f"Error initializing Binary F3-Net: {e}", exc_info=True)
 
     # 3. Multiclass DINOv3
     try:
         if Dinov3MultiDetector and os.path.exists(DINOV3_MULTI_WEIGHTS):
             dinov3_multi_detector = Dinov3MultiDetector(weight_path=DINOV3_MULTI_WEIGHTS)
     except Exception as e:
-        print(f"Error initializing Multiclass DINOv3: {e}")
+        logging.error(f"Error initializing Multiclass DINOv3: {e}", exc_info=True)
 
     # 4. Multiclass F3-Net
     try:
         if F3NetMultiDetector and os.path.exists(F3NET_MULTI_WEIGHTS):
             f3net_multi_detector = F3NetMultiDetector(weight_path=F3NET_MULTI_WEIGHTS)
     except Exception as e:
-        print(f"Error initializing Multiclass F3-Net: {e}")
+        logging.error(f"Error initializing Multiclass F3-Net: {e}", exc_info=True)
 
     # 5. Binary UNet
     try:
         if UNetBinaryDetector and os.path.exists(UNET_BINARY_WEIGHTS):
             unet_detector = UNetBinaryDetector(weight_path=UNET_BINARY_WEIGHTS)
     except Exception as e:
-        print(f"Error initializing Binary UNet: {e}")
+        logging.error(f"Error initializing Binary UNet: {e}", exc_info=True)
 
     # 6. Multiclass UNet
     try:
         if UNetMultiDetector and os.path.exists(UNET_MULTI_WEIGHTS):
             unet_multi_detector = UNetMultiDetector(weight_path=UNET_MULTI_WEIGHTS)
     except Exception as e:
-        print(f"Error initializing Multiclass UNet: {e}")
+        logging.error(f"Error initializing Multiclass UNet: {e}", exc_info=True)
 
 init_models()
 
 async def run_c2pa_analysis(image_path: str) -> Dict[str, Any]:
-    """C2PA 분석 모의(Mock) 함수"""
-    # 현재는 로직이 없으므로 기본값 반환
+    """C2PA 정보를 분석하여 변조 여부 및 출처 정보를 반환합니다. (Mock)"""
     return {
         "is_c2pa_compliant": False,
         "created_model": None,
@@ -128,7 +135,7 @@ async def run_c2pa_analysis(image_path: str) -> Dict[str, Any]:
     }
 
 async def run_binary_detection(image_path: str) -> Dict[str, Any]:
-    """DINOv3와 F3-Net 추론 실행 및 결과 취합"""
+    """DINOv3, F3-Net, UNet 모델을 통해 이미지의 AI 생성 여부를 판정합니다."""
     results = []
     
     # 1. DINOv3 실행
@@ -149,7 +156,7 @@ async def run_binary_detection(image_path: str) -> Dict[str, Any]:
     if not results:
         return {"binary_list": [], "avg_ai_prob": 0.0, "final_is_ai": False}
 
-    # 평균 점수 계산
+    # 평균 점수 기반 최종 판정 (Threshold: 0.5)
     avg_ai_prob = sum(r["confidence_score"] for r in results) / len(results)
     final_is_ai = avg_ai_prob >= 0.5
     
@@ -160,37 +167,40 @@ async def run_binary_detection(image_path: str) -> Dict[str, Any]:
     }
 
 async def run_multiclass_detection(image_path: str) -> List[Dict[str, Any]]:
-    """DINOv3와 F3-Net 다중 분류 추론 실행 및 결과 리스트 반환"""
+    """다중 분류 모델을 실행하여 이미지를 생성한 구체적인 AI 모델을 판별합니다."""
     results = []
     
-    # 1. DINOv3 다중 분류 실행
+    # 1. DINOv3 다중 분류
     if dinov3_multi_detector:
         try:
             res_dino = dinov3_multi_detector.predict(image_path)
             results.append(res_dino)
         except Exception as e:
-            print(f"DINOv3 Multiclass Error: {e}")
+            logging.error(f"DINOv3 Multiclass Error: {e}", exc_info=True)
             
-    # 2. F3Net 다중 분류 실행
+    # 2. F3Net 다중 분류
     if f3net_multi_detector:
         try:
             res_f3 = f3net_multi_detector.predict(image_path)
             results.append(res_f3)
         except Exception as e:
-            print(f"F3Net Multiclass Error: {e}")
+            logging.error(f"F3Net Multiclass Error: {e}", exc_info=True)
 
-    # 3. UNet 다중 분류 실행
+    # 3. UNet 다중 분류
     if unet_multi_detector:
         try:
             res_unet = unet_multi_detector.predict(image_path)
             results.append(res_unet)
         except Exception as e:
-            print(f"UNet Multiclass Error: {e}")
+            logging.error(f"UNet Multiclass Error: {e}", exc_info=True)
             
     return results
 
 async def execute_image_pipeline(image_path: str, progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
-    """전체 AI 검증 파이프라인 제어"""
+    """
+    이미지 검증 전체 파이프라인을 실행합니다.
+    C2PA 분석 -> (선택적) 이진 분류 -> (AI 판정 시) 다중 분류 순으로 진행됩니다.
+    """
     pipeline_result = {
         "c2pa": None,
         "binary": [],
@@ -198,7 +208,7 @@ async def execute_image_pipeline(image_path: str, progress_callback: Optional[Ca
         "final_result": {}
     }
 
-    # C2PA 분석
+    # 1단계: C2PA 분석
     if progress_callback:
         await progress_callback(status="C2PA_PROCESSING")
     
@@ -214,11 +224,11 @@ async def execute_image_pipeline(image_path: str, progress_callback: Optional[Ca
     is_c2pa_compliant = c2pa_data.get("is_c2pa_compliant", False)
 
     if is_c2pa_compliant:
-        # C2PA 충족 시 이진 분류를 건너뛰고 AI로 판정
+        # C2PA 충족 시 이진 분류를 건너뛰고 AI로 확정 판정
         final_is_ai = True
         avg_ai_prob = 1.0
     else:
-        # 이진 분류 실행
+        # 2단계: 이진 분류 (AI 여부 판정)
         if progress_callback:
             await progress_callback(status="BINARY_PROCESSING")
         
@@ -230,7 +240,7 @@ async def execute_image_pipeline(image_path: str, progress_callback: Optional[Ca
         if progress_callback:
             await progress_callback(status="BINARY_COMPLETED", data={"binary": binary_res["binary_list"]})
 
-    # AI 판정 시(C2PA 충족 포함) 다중 분류 진행
+    # 3단계: 다중 분류 (AI 판정 시 또는 C2PA 충족 시 실행)
     requires_multiclass = False
     final_generator_model = None
     
@@ -242,7 +252,7 @@ async def execute_image_pipeline(image_path: str, progress_callback: Optional[Ca
         pipeline_result["multi"] = multi_res
         requires_multiclass = True
         
-        # confidence_score가 가장 높은 결과 선택
+        # 신뢰도(confidence_score)가 가장 높은 모델을 최종 결과로 선택
         if multi_res:
             best_res = max(multi_res, key=lambda x: x["confidence_score"])
             final_generator_model = best_res["predicted_model"]
@@ -250,7 +260,7 @@ async def execute_image_pipeline(image_path: str, progress_callback: Optional[Ca
         if progress_callback:
             await progress_callback(status="MULTICLASS_COMPLETED", data={"multi": multi_res})
 
-    # 최종 결과 요약 세팅
+    # 최종 결과 취합
     pipeline_result["final_result"] = {
         "final_is_ai": final_is_ai,
         "final_ai_probability": avg_ai_prob,

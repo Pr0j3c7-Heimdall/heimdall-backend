@@ -47,7 +47,8 @@ class TorchKNN:
         torch.save({'X_train': self.X_train.cpu(), 'y_train': self.y_train.cpu(), 'k': self.k}, filepath)
         
     def load(self, filepath):
-        data = torch.load(filepath, map_location=self.device)
+        # (보안 적용) weights_only=True 추가
+        data = torch.load(filepath, map_location=self.device, weights_only=True)
         self.X_train = data['X_train'].to(self.device)
         self.y_train = data['y_train'].to(self.device)
         self.k = data['k']
@@ -123,7 +124,8 @@ class TorchMLP(nn.Module):
         torch.save(self.state_dict(), filepath)
         
     def load(self, filepath):
-        self.load_state_dict(torch.load(filepath, map_location=self.device))
+        # (보안 적용) weights_only=True 추가
+        self.load_state_dict(torch.load(filepath, map_location=self.device, weights_only=True))
 
 
 def get_model(model_name, input_dim=None, num_classes=10, **kwargs):

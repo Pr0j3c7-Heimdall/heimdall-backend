@@ -1,3 +1,8 @@
+"""
+UNet 특징 기반 분류기 모델 정의
+추출된 UNet 특징 벡터를 입력받아 최종 판정을 수행하는 MLP 및 KNN 모델 구조를 정의합니다.
+"""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,14 +11,16 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 
 class TorchKNN:
-    def __init__(self, n_neighbors=20, device='cuda'):
+    """GPU 가속을 지원하는 K-최근접 이웃(KNN) 분류기"""
+
+    def __init__(self, n_neighbors: int = 20, device: str = 'cuda'):
         self.k = n_neighbors
         self.device = device
         self.X_train = None
         self.y_train = None
 
-    def fit(self, X, y):
-        # 입력된 Tensor를 GPU로 이동
+    def fit(self, X: torch.Tensor, y: torch.Tensor):
+        """학습 데이터를 GPU로 이동하고 정규화합니다."""
         self.X_train = X.clone().detach().float().to(self.device)
         self.y_train = y.clone().detach().long().to(self.device)
         
@@ -21,7 +28,8 @@ class TorchKNN:
         std = self.X_train.std(dim=1, keepdim=True)
         self.X_train = (self.X_train - mean) / (std + 1e-8)
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: torch.Tensor) -> np.ndarray:
+        """입력 특징과 학습 데이터 간의 코사인 유사도를 기반으로 확률을 계산합니다."""
         X_test = X.clone().detach().float().to(self.device)
         mean = X_test.mean(dim=1, keepdim=True)
         std = X_test.std(dim=1, keepdim=True)
@@ -33,26 +41,30 @@ class TorchKNN:
         with torch.no_grad():
             for i in range(0, len(X_test), batch_size):
                 X_batch = X_test[i:i+batch_size]
+                # 행렬 곱을 통한 유사도 계산
                 similarity = torch.mm(X_batch, self.X_train.t())
                 _, indices = torch.topk(similarity, self.k, dim=1)
                 
+                # 상위 K개 이웃의 라벨 평균으로 확률 도출
                 k_labels = self.y_train[indices]
                 prob_batch = k_labels.float().mean(dim=1)
                 prob_list.extend(prob_batch.cpu().numpy())
                 
         return np.array(prob_list)
 
-    def save(self, filepath):
+    def save(self, filepath: str):
         torch.save({'X_train': self.X_train.cpu(), 'y_train': self.y_train.cpu(), 'k': self.k}, filepath)
         
-    def load(self, filepath):
+    def load(self, filepath: str):
         data = torch.load(filepath, map_location=self.device)
         self.X_train = data['X_train'].to(self.device)
         self.y_train = data['y_train'].to(self.device)
         self.k = data['k']
 
 class TorchMLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim=640, output_dim=2):
+    """UNet 특징 분류를 위한 다층 퍼셉트론(MLP) 모델"""
+
+    def __init__(self, input_dim: int, hidden_dim: int = 640, output_dim: int = 2):
         super(TorchMLP, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -62,8 +74,8 @@ class TorchMLP(nn.Module):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.to(self.device)
 
-    def fit(self, X, y, epochs=1000, lr=3e-4, batch_size=32, patience=15):
-        # scikit-learn 분할을 위해 잠시 numpy 변환 후 다시 텐서화
+    def fit(self, X: torch.Tensor, y: torch.Tensor, epochs: int = 1000, lr: float = 3e-4, batch_size: int = 32, patience: int = 15):
+        """모델 학습 및 조기 종료(Early Stopping)를 수행합니다."""
         X_np, y_np = X.numpy(), y.numpy()
         X_train, X_val, y_train, y_val = train_test_split(X_np, y_np, test_size=0.2, random_state=42, stratify=y_np)
         
@@ -104,13 +116,13 @@ class TorchMLP(nn.Module):
                 patience_counter += 1
                 
             if patience_counter >= patience:
-                print(f"Early stopping at epoch {epoch+1}. Best Val Acc: {best_acc*100:.2f}%")
                 break
                 
         if best_state is not None:
             self.load_state_dict(best_state)
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: torch.Tensor) -> np.ndarray:
+        """입력 특징에 대해 AI 생성물일 확률(클래스 1)을 반환합니다."""
         self.eval()
         X_tensor = X.clone().detach().float().to(self.device)
         with torch.no_grad():
@@ -118,13 +130,14 @@ class TorchMLP(nn.Module):
             probs = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()
         return probs
 
-    def save(self, filepath):
+    def save(self, filepath: str):
         torch.save(self.state_dict(), filepath)
         
-    def load(self, filepath):
+    def load(self, filepath: str):
         self.load_state_dict(torch.load(filepath, map_location=self.device))
 
-def get_model(model_name, input_dim=None, **kwargs):
+def get_model(model_name: str, input_dim: int = None, **kwargs):
+    """설정에 맞는 분류기 모델 인스턴스를 생성하여 반환합니다."""
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if model_name == 'knn':
         return TorchKNN(n_neighbors=kwargs.get('n_neighbors', 101), device=device)
