@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 |  | Mac | Windows | Linux |
 | --- | --- | --- | --- |
-| 설치 | `brew install mysql` | [MySQL 설치](https://dev.mysql.com/downloads/installer/) | `install mysql-server` |
+| 설치 | `brew install mysql` | [MySQL 설치](https://dev.mysql.com/downloads/installer/) | `apt-get install mysql-server` |
 | 실행 | `brew services start mysql` | 서비스에서 MySQL 시작 | `service mysql start` |
 
 ```sql
@@ -62,8 +62,18 @@ CREATE DATABASE heimdall CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     - cli에 ```hf auth login``` 입력
     - email 입력 > 복사한 토큰 붙여넣기
 
+### 6. python-magic 패키지를 위한 libmagic 설치
+```bash
+# mac
+brew install libmagic
+```
 
-### 6. 서버 실행
+```bash
+# linux
+apt-get install libmagic1
+```
+
+### 7. 서버 실행
 
 ```bash
 # 서버 실행
