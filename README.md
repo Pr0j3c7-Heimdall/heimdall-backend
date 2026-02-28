@@ -40,8 +40,8 @@ pip install -r requirements.txt
 
 |  | Mac | Windows | Linux |
 | --- | --- | --- | --- |
-| 설치 | `brew install mysql` | [MySQL 설치](https://dev.mysql.com/downloads/installer/) | install mysql-server |
-| 실행 | `brew services start mysql` | 서비스에서 MySQL 시작 | service mysql start |
+| 설치 | `brew install mysql` | [MySQL 설치](https://dev.mysql.com/downloads/installer/) | `install mysql-server` |
+| 실행 | `brew services start mysql` | 서비스에서 MySQL 시작 | `service mysql start` |
 
 ```sql
 -- DB 생성
@@ -55,6 +55,7 @@ CREATE DATABASE heimdall CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 2. `Setting` > `Access Tokens` > `+Create new token`
 
 3. 발급받은 토큰 복사
+<img width="600" height="300" alt="Token Example" src="https://github.com/user-attachments/assets/912c6f7d-01a4-462f-8e27-7bc6d38e92b1" />
 
 4. cli에서 로그인하기
 
