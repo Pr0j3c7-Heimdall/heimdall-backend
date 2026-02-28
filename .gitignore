@@ -61,3 +61,7 @@ logs/
 *.db
 *.sqlite3
 *.sqlite
+uploads/
+
+# ----- AI 가중치 -----
+*.pth
