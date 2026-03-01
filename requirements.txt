@@ -16,6 +16,11 @@ python-jose[cryptography]>=3.3.0
 google-auth>=2.0.0
 requests>=2.31.0
 
+# C2PA Analysis
+cbor2>=5.6.0
+brotli>=1.1.0
+cryptography>=42.0.0
+
 # Dev
 pytest>=8.0.0
 pytest-asyncio>=0.24.0

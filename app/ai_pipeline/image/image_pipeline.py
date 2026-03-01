@@ -9,6 +9,12 @@ import asyncio
 import logging
 from typing import Optional, Callable, Dict, Any, List
 
+try:
+    from .c2pa.c2pa_analyzer import C2PAAnalyzer
+except ImportError as e:
+    logging.error(f"Import error (C2PAAnalyzer): {e}", exc_info=True)
+    C2PAAnalyzer = None
+
 # --- AI 모델 임포트 ---
 
 # DINOv3 Binary
@@ -119,7 +125,14 @@ def init_models():
 init_models()
 
 async def run_c2pa_analysis(image_path: str) -> Dict[str, Any]:
-    """C2PA 정보를 분석하여 변조 여부 및 출처 정보를 반환합니다. (Mock)"""
+    """C2PA 정보를 분석하여 변조 여부 및 출처 정보를 반환합니다."""
+    if C2PAAnalyzer:
+        try:
+            # 동기 함수 블로킹 방지를 위해 별도의 스레드(executor)에서 실행
+            return await asyncio.get_event_loop().run_in_executor(None, C2PAAnalyzer.analyze_image, image_path)
+        except Exception as e:
+            logging.error(f"C2PA Analysis Error: {e}", exc_info=True)
+    
     return {
         "is_c2pa_compliant": False,
         "created_model": None,
