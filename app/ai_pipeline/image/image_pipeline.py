@@ -128,8 +128,8 @@ async def run_c2pa_analysis(image_path: str) -> Dict[str, Any]:
     """C2PA 정보를 분석하여 변조 여부 및 출처 정보를 반환합니다."""
     if C2PAAnalyzer:
         try:
-            # 동기 함수이므로 루프에서 실행하거나 그냥 호출 (파일 I/O 위주이므로 여기서는 직접 호출)
-            return C2PAAnalyzer.analyze_image(image_path)
+            # 동기 함수 블로킹 방지를 위해 별도의 스레드(executor)에서 실행
+            return await asyncio.get_event_loop().run_in_executor(None, C2PAAnalyzer.analyze_image, image_path)
         except Exception as e:
             logging.error(f"C2PA Analysis Error: {e}", exc_info=True)
     

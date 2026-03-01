@@ -30,6 +30,8 @@ TRUSTED_INTERMEDIATE_FPS = {
 PNG_SIG = b"\x89PNG\r\n\x1a\n"
 JPG_SOI = b"\xff\xd8"
 MAX_VARCHAR = 100
+MAX_BOX_DEPTH = 20  # JUMBF 재귀 깊이 제한 (Stack Overflow 방지)
+MAX_DECOMPRESSED_SIZE = 10 * 1024 * 1024  # Brotli 최대 해제 크기 제한 (10MB, DoS 방지)
 
 # --- Utility Functions ---
 
@@ -41,9 +43,6 @@ def be32(b: bytes) -> int:
 
 def be64(b: bytes) -> int:
     return struct.unpack(">Q", b)[0]
-
-def sha256(b: bytes) -> bytes:
-    return hashlib.sha256(b).digest()
 
 def is_bytes32(x: Any) -> bool:
     return isinstance(x, (bytes, bytearray)) and len(x) == 32
@@ -188,7 +187,11 @@ class Box:
     payload: memoryview
     children: List["Box"] = dataclasses.field(default_factory=list)
 
-def parse_boxes(buf: bytes, start: int = 0, end: Optional[int] = None) -> List[Box]:
+def parse_boxes(buf: bytes, start: int = 0, end: Optional[int] = None, depth: int = 0) -> List[Box]:
+    if depth > MAX_BOX_DEPTH:
+        logging.warning("Maximum JUMBF box recursion depth exceeded. Potential DoS attempt.")
+        return []
+
     if end is None:
         end = len(buf)
     boxes: List[Box] = []
@@ -209,14 +212,24 @@ def parse_boxes(buf: bytes, start: int = 0, end: Optional[int] = None) -> List[B
         payload_size = size - header
         payload = memoryview(buf)[payload_off : payload_off + payload_size]
         box = Box(typ, i, size, header, payload_off, payload_size, payload)
+        
         if typ == "jumb":
-            box.children = parse_boxes(buf, payload_off, payload_off + payload_size)
+            box.children = parse_boxes(buf, payload_off, payload_off + payload_size, depth + 1)
         if typ == "brob":
             try:
-                decomp = brotli.decompress(payload.tobytes())
-                box.children = parse_boxes(decomp, 0, len(decomp))
-            except Exception:
+                # Brotli Bomb(DoS) 방지를 위해 청크 단위 제한적 압축 해제
+                dec = brotli.Decompressor()
+                decomp = bytearray()
+                for chunk_idx in range(0, len(payload), 4096):
+                    decomp.extend(dec.process(payload.tobytes()[chunk_idx:chunk_idx+4096]))
+                    if len(decomp) > MAX_DECOMPRESSED_SIZE:
+                        raise ValueError("Brotli payload exceeded size limit (DoS prevention)")
+                
+                box.children = parse_boxes(bytes(decomp), 0, len(decomp), depth + 1)
+            except Exception as e:
+                logging.error(f"Brotli decompression failed: {e}", exc_info=True)
                 box.children = []
+                
         boxes.append(box)
         i += size
     return boxes
@@ -253,7 +266,8 @@ def collect_cbor_nodes(root_boxes: List[Box]) -> List[CborNode]:
                 try:
                     dec = cbor2.loads(pb)
                     nodes.append(CborNode(tuple(labels), pb, dec))
-                except Exception:
+                except Exception as e:
+                    logging.error(f"CBOR parse error: {e}", exc_info=True)
                     continue
             if b.children:
                 walk(b.children, labels)
@@ -277,6 +291,28 @@ def verify_cose_sign1(tag18_obj: cbor2.CBORTag, claim_bytes: bytes) -> Tuple[boo
         if len(chain) >= 2:
             inter = x509.load_der_x509_certificate(chain[1])
             intermediate_fp = inter.fingerprint(hashes.SHA256()).hex()
+            
+            # Leaf Certificate가 Intermediate CA로부터 발급되었는지 서명 검증 (보안 강화)
+            try:
+                inter_pub = inter.public_key()
+                if isinstance(inter_pub, rsa.RSAPublicKey):
+                    inter_pub.verify(
+                        leaf.signature,
+                        leaf.tbs_certificate_bytes,
+                        padding.PKCS1v15(),
+                        leaf.signature_hash_algorithm
+                    )
+                elif isinstance(inter_pub, ec.EllipticCurvePublicKey):
+                    inter_pub.verify(
+                        leaf.signature,
+                        leaf.tbs_certificate_bytes,
+                        ec.ECDSA(leaf.signature_hash_algorithm)
+                    )
+                else:
+                    return False, None, "Unsupported intermediate public key type"
+            except Exception as e:
+                logging.error(f"Certificate chain validation failed: {e}", exc_info=True)
+                return False, None, "Leaf certificate not properly issued by intermediate"
             
         alg = prot_map.get(1) or unprotected.get(1)
         signer_info = {
@@ -306,11 +342,24 @@ def hash_data_verify(file_bytes: bytes, hash_data_obj: Dict) -> bool:
     expected = hash_data_obj.get("hash")
     if not is_bytes32(expected): return False
     
-    # exclusions 처리 (단순화)
+    # C2PA Exclusions 로직 적용 (서명 영역 등을 해시에서 제외)
     h = hashlib.sha256()
-    # 실제 구현은 exclusions 범위를 제외하고 update 해야 함
-    # 여기서는 전체 파일 해시와 비교하는 기본 로직만 포함 (C2PA_vertify_DB 참고)
-    h.update(file_bytes)
+    exclusions = hash_data_obj.get("exclusions", [])
+    # start 값 기준으로 오름차순 정렬
+    sorted_exclusions = sorted(exclusions, key=lambda x: x.get("start", 0))
+    
+    pos = 0
+    for exc in sorted_exclusions:
+        start = exc.get("start", 0)
+        length = exc.get("length", 0)
+        
+        if start > pos:
+            h.update(file_bytes[pos:start])
+        pos = start + length
+        
+    if pos < len(file_bytes):
+        h.update(file_bytes[pos:])
+        
     return h.digest() == bytes(expected)
 
 # --- Action Parsing ---
@@ -358,16 +407,18 @@ class C2PAAnalyzer:
         else:
             _, payloads = parse_jpeg_parts(file_bytes)
             if payloads:
-                stream = b"".join(p[4:] if p.startswith(b"C2PA") else p for p in payloads)
-                jpos = stream.find(b"jumb")
-                if jpos >= 4: stores.append(stream[jpos-4:])
+                # 여러 개의 C2PA 매니페스트 APP11 세그먼트를 개별적으로 처리
+                for p_data in payloads:
+                    stream = p_data[4:] if p_data.startswith(b"C2PA") else p_data
+                    jpos = stream.find(b"jumb")
+                    if jpos >= 4:
+                        stores.append(stream[jpos-4:])
 
         if not stores: return {"is_c2pa_compliant": False}
 
         all_manifests = []
         for s in stores:
             nodes = collect_cbor_nodes(parse_boxes(s))
-            # URN별로 노드 그룹화
             idx = {}
             for n in nodes:
                 if len(n.label_path) >= 2:
@@ -403,7 +454,7 @@ class C2PAAnalyzer:
             "converted_model": trunc(best["actions"]["converted_model"]),
             "created_description": trunc(best["actions"]["created_description"]),
             "claim_generator": trunc(best["claim_generator"]),
-            "claim_generator_info_name": None, # 필요 시 추가 추출
+            "claim_generator_info_name": None,
             "synth_id": trunc(best["actions"]["synth_id"]),
             "visible_watermark": trunc(best["actions"]["visible_wm"]),
             "total_digital_source_type": trunc(best["actions"]["total_dst"]),
