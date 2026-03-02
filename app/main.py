@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +21,7 @@ from app.detection import router as detection_router
 
 from app.common.exception import register_exception_handlers
 from app.common.schema import SuccessResponse
-from app.config import get_auth_settings, get_cors_settings
+from app.config import get_auth_settings, get_cors_settings, get_image_settings 
 from app.database import get_db, init_db
 
 
@@ -47,6 +48,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 register_exception_handlers(app)
+
+# 정적 파일 서빙 (업로드된 이미지 제공용)
+image_settings = get_image_settings()
+app.mount("/uploads", StaticFiles(directory=image_settings.UPLOAD_DIR), name="uploads")
+
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(image_base_router, prefix="/api/v1")
