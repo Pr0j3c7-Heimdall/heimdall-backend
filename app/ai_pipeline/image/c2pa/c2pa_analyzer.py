@@ -35,24 +35,17 @@ logging.info(f"C2PA: Using trust anchors at (TRUST_ANCHORS): {TRUST_ANCHORS}")
 
 def run_cmd(args: List[str], cwd: Optional[str] = None) -> Tuple[int, str, str]:
     """외부 명령어를 실행하고 결과를 반환합니다."""
-    if IS_WINDOWS:
-        cmd_str = " ".join(f'"{arg}"' for arg in args)
-        shell_val = True
-    else:
-        cmd_str = args
-        shell_val = False
-    
-    logging.info(f"C2PA: Executing command: {cmd_str}")
+    logging.info(f"C2PA: Executing command: {args}")
     logging.info(f"C2PA: In working directory (cwd): {cwd}")
     
     proc = subprocess.run(
-        cmd_str,
+        args,  # 문자열 조합 대신 리스트 그대로 전달
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=shell_val,
+        shell=False,  # 보안을 위해 무조건 False로 설정
         cwd=cwd
     )
     return proc.returncode, proc.stdout, proc.stderr
@@ -295,6 +288,13 @@ def classify_validation_status(vs: Any, validation_state: Optional[str]) -> Tupl
 
 class C2PAAnalyzer:
     @staticmethod
+    def trunc(s: Optional[str], maxlen: int = 100) -> Optional[str]:
+        if s is None:
+            return None
+        s = str(s)
+        return s if len(s) <= maxlen else s[: maxlen - 1] + "_"
+    
+    @staticmethod
     def analyze_image(image_path: str) -> Dict[str, Any]:
         """이미지를 분석하여 C2PA 준수 여부 및 관련 메타데이터를 추출합니다."""
         p = Path(image_path)
@@ -363,16 +363,16 @@ class C2PAAnalyzer:
 
             return {
                 "is_c2pa_compliant": is_compliant,
-                "created_model": fields["created_model"],
-                "converted_model": fields["converted_model"],
-                "created_description": fields["created_description"],
-                "claim_generator": fields["claim_generator"],
-                "claim_generator_info_name": fields["claim_generator_info_name"],
-                "synth_id": fields["synth_id"],
-                "visible_watermark": fields["visible_watermark"],
-                "total_digital_source_type": fields["total_digital_source_type"],
-                "synth_id_digital_source_type": fields["synth_id_digital_source_type"],
-                "visible_watermark_digital_source_type": fields["visible_watermark_digital_source_type"]
+                "created_model": C2PAAnalyzer.trunc(fields["created_model"]),
+                "converted_model": C2PAAnalyzer.trunc(fields["converted_model"]),
+                "created_description": C2PAAnalyzer.trunc(fields["created_description"]),
+                "claim_generator": C2PAAnalyzer.trunc(fields["claim_generator"]),
+                "claim_generator_info_name": C2PAAnalyzer.trunc(fields["claim_generator_info_name"]),
+                "synth_id": C2PAAnalyzer.trunc(fields["synth_id"]),
+                "visible_watermark": C2PAAnalyzer.trunc(fields["visible_watermark"]),
+                "total_digital_source_type": C2PAAnalyzer.trunc(fields["total_digital_source_type"]),
+                "synth_id_digital_source_type": C2PAAnalyzer.trunc(fields["synth_id_digital_source_type"]),
+                "visible_watermark_digital_source_type": C2PAAnalyzer.trunc(fields["visible_watermark_digital_source_type"])
             }
 
         except Exception as e:
