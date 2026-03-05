@@ -100,7 +100,8 @@ class DetectionService:
             completed_at=summary.completed_at,
             c2pa=c2pa_data,
             binary=binary_results,
-            multi=multi_results
+            multi=multi_results,
+            metadata=image.image_metadata
         )
 
     async def run_ai_detection(self, image_id: int, image_path: str):
@@ -124,6 +125,8 @@ class DetectionService:
                         await repo.save_binary_result(image_id=image_id, data_list=data["binary"])
                     if "multi" in data:
                         await repo.save_multiclass_result(image_id=image_id, data_list=data["multi"])
+                    if "metadata" in data:
+                        await repo.update_image_metadata(image_id=image_id, metadata=data["metadata"])
 
         # 파이프라인 실행
         pipeline_output = await execute_image_pipeline(

@@ -123,3 +123,13 @@ class DetectionRepository:
             )
             self.db_session.add(multiclass_result)
         await self.db_session.commit()
+
+    async def update_image_metadata(self, image_id: int, metadata: dict) -> None:
+        """이미지 테이블의 메타데이터 컬럼을 업데이트함"""
+        stmt = (
+            update(Image)
+            .where(Image.id == image_id)
+            .values(image_metadata=metadata)
+        )
+        await self.db_session.execute(stmt)
+        await self.db_session.commit()
