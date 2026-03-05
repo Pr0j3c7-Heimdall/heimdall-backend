@@ -15,6 +15,12 @@ except ImportError as e:
     logging.error(f"Import error (C2PAAnalyzer): {e}", exc_info=True)
     C2PAAnalyzer = None
 
+try:
+    from .metadata.metadata_extractor import extract_metadata
+except ImportError as e:
+    logging.error(f"Import error (extract_metadata): {e}", exc_info=True)
+    extract_metadata = None
+
 # --- AI 모델 임포트 ---
 
 # DINOv3 Binary
@@ -212,22 +218,23 @@ async def run_multiclass_detection(image_path: str) -> List[Dict[str, Any]]:
 async def execute_image_pipeline(image_path: str, progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
     """
     이미지 검증 전체 파이프라인을 실행합니다.
-    C2PA 분석 -> (선택적) 이진 분류 -> (AI 판정 시) 다중 분류 순으로 진행됩니다.
+    C2PA 분석 -> (선택적) 이진 분류 -> (AI 판정 시) 다중 분류 / (현실 사진 판정 시) 메타데이터 추출 순으로 진행됩니다.
     """
     pipeline_result = {
         "c2pa": None,
         "binary": [],
         "multi": [],
+        "metadata": None,
         "final_result": {}
     }
 
     # 1단계: C2PA 분석
     if progress_callback:
         await progress_callback(status="C2PA_PROCESSING")
-    
+
     c2pa_data = await run_c2pa_analysis(image_path)
     pipeline_result["c2pa"] = c2pa_data
-    
+
     if progress_callback:
         await progress_callback(status="C2PA_COMPLETED", data={"c2pa": c2pa_data})
 
@@ -244,34 +251,45 @@ async def execute_image_pipeline(image_path: str, progress_callback: Optional[Ca
         # 2단계: 이진 분류 (AI 여부 판정)
         if progress_callback:
             await progress_callback(status="BINARY_PROCESSING")
-        
+
         binary_res = await run_binary_detection(image_path)
         pipeline_result["binary"] = binary_res["binary_list"]
         final_is_ai = binary_res["final_is_ai"]
         avg_ai_prob = binary_res["avg_ai_prob"]
-        
+
         if progress_callback:
             await progress_callback(status="BINARY_COMPLETED", data={"binary": binary_res["binary_list"]})
 
-    # 3단계: 다중 분류 (AI 판정 시 또는 C2PA 충족 시 실행)
+    # 3단계: 다중 분류 또는 메타데이터 추출
     requires_multiclass = False
     final_generator_model = None
-    
+
     if final_is_ai:
         if progress_callback:
             await progress_callback(status="MULTICLASS_PROCESSING", data=None)
-        
+
         multi_res = await run_multiclass_detection(image_path)
         pipeline_result["multi"] = multi_res
         requires_multiclass = True
-        
+
         # 신뢰도(confidence_score)가 가장 높은 모델을 최종 결과로 선택
         if multi_res:
             best_res = max(multi_res, key=lambda x: x["confidence_score"])
             final_generator_model = best_res["predicted_model"]
-        
+
         if progress_callback:
             await progress_callback(status="MULTICLASS_COMPLETED", data={"multi": multi_res})
+    else:
+        # 현실 사진으로 판정되었을 때 메타데이터 추출
+        if extract_metadata:
+            if progress_callback:
+                await progress_callback(status="METADATA_PROCESSING")
+
+            metadata_res = await extract_metadata(image_path)
+            pipeline_result["metadata"] = metadata_res
+
+            if progress_callback:
+                await progress_callback(status="METADATA_COMPLETED", data={"metadata": metadata_res})
 
     # 최종 결과 취합
     pipeline_result["final_result"] = {
