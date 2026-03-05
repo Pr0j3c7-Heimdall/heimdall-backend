@@ -65,3 +65,8 @@ uploads/
 
 # ----- AI 가중치 -----
 *.pth
+
+# ----- C2PA에 필요한 파일들 -----
+*.pem
+*.exe
+c2patool
