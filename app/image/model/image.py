@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey
+from sqlalchemy import Column, BigInteger, String, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -11,6 +11,7 @@ class Image(Base):
     filename = Column(String(255), nullable=False)
     filepath = Column(String(500), nullable=False)
     image_url = Column(String(500), nullable=False)
+    image_metadata = Column(JSON, nullable=True)  # 현실 사진일 경우 저장되는 메타데이터
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 from pydantic import BaseModel, Field
 from app.common.schema.response import SuccessResponse
@@ -51,6 +51,7 @@ class DetectionResultData(BaseModel):
     c2pa: Optional[C2PAResultSchema] = Field(None, description="C2PA verification result")
     binary: List[BinaryResultSchema] = Field(default_factory=list, description="List of binary detection results")
     multi: List[MultiResultSchema] = Field(default_factory=list, description="List of multiclass detection results")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata for real photos")
 
 class DetectionResultResponse(SuccessResponse):
     data: DetectionResultData
