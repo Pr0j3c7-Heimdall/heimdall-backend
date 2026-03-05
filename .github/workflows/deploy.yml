@@ -9,25 +9,24 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Environment & Install Dependencies
+      - name: Deploy and Restart Server
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
+          # 1. 실제 프로젝트 최상위 폴더로 이동
+          cd /app
           
+          # 2. 최신 코드 가져오기 (main 브랜치 동기화)
+          git fetch origin
+          git reset --hard origin/main
+          
+          # 3. 가상환경 활성화 및 패키지 설치
+          source venv/bin/activate
           pip install -r requirements.txt
           
-          cp .env.example .env
-          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=mysql+aiomysql://root:${{ secrets.DB_PASSWORD }}@localhost:3306/heimdall|g' .env
-
-      - name: Restart Uvicorn Server
-        run: |
-          source venv/bin/activate
-          
-          # 기존에 켜져 있는 서버가 있다면 강제 종료 (에러 무시)
+          # 4. 기존에 켜져 있는 서버 종료
           pkill -f uvicorn || true
           
-          # 백그라운드에서 서버 켜고, app.log에 로그 저장
+          # 5. [핵심] Runner가 작업 종료 후 uvicorn을 죽이지 못하게 추적 끊기
+          export RUNNER_TRACKING_ID=""
+          
+          # 6. 서버를 백그라운드에서 재실행
           nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
