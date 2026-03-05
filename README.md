@@ -73,7 +73,20 @@ brew install libmagic
 apt-get install libmagic1
 ```
 
-### 7. 서버 실행
+### 7. C2PA 분석하기 위한 준비
+정상적인 분석을 위해 아래 경로에 각 파일이 있어야 합니다.
+[여기](https://drive.google.com/file/d/165r1bSY2AlMgVADh3WdljKpK2XCCTDCX/view?usp=sharing)에서 다운로드 받은 후 해당 경로에 넣어주세요.
+
+- **anchors.pem**: `app\ai_pipeline\image\c2pa\anchors.pem`
+- **c2patool.exe**: `app\ai_pipeline\image\c2pa\c2patool`
+
+```
+# 디렉토리로 이동 후
+chmod +x app\ai_pipeline\image\c2pa\c2patool
+```
+한 번 실행해주세요.
+
+### 8. 서버 실행
 
 ```bash
 # 서버 실행
