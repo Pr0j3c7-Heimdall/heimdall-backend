@@ -47,8 +47,8 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
              /app/app/ai_pipeline/image/multiclass/F3Net/weights \
              /app/app/ai_pipeline/image/multiclass/UNet/weights && \
     # c2patool 관련 링크
-    ln -s /shared_data/c2patool/c2patool/anchors.pem /app/app/ai_pipeline/image/c2pa/anchors.pem && \
-    ln -s /shared_data/c2patool/c2patool/c2patool /app/app/ai_pipeline/image/c2pa/c2patool && \
+    ln -s /shared_data/c2patool/anchors.pem /app/app/ai_pipeline/image/c2pa/anchors.pem && \
+    ln -s /shared_data/c2patool/c2patool /app/app/ai_pipeline/image/c2pa/c2patool && \
     # 이진 분류 모델 가중치 링크
     ln -s /shared_data/heimdall-pth/DINOv3_binary.pth /app/app/ai_pipeline/image/binary/DINOv3/weights/DINOv3_binary.pth && \
     ln -s /shared_data/heimdall-pth/F3Net_binary.pth /app/app/ai_pipeline/image/binary/F3Net/weights/F3Net_binary.pth && \
