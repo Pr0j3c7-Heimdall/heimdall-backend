@@ -1,32 +1,19 @@
-name: Heimdall Deploy
+name: Trigger Deploy to Infra
 
+# 메인 브랜치에 코드가 Push될 때 작동합니다.
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  deploy:
-    runs-on: self-hosted
-
+  notify-infra:
+    runs-on: ubuntu-latest
+    
     steps:
-      - name: Deploy and Restart Server
-        run: |
-          # 1. 실제 프로젝트 최상위 폴더로 이동
-          cd /app
-          
-          # 2. 최신 코드 가져오기 (main 브랜치 동기화)
-          git fetch origin
-          git reset --hard origin/main
-          
-          # 3. 가상환경 활성화 및 패키지 설치
-          source venv/bin/activate
-          pip install -r requirements.txt
-          
-          # 4. 기존에 켜져 있는 서버 종료
-          pkill -f uvicorn || true
-          
-          # 5. [핵심] Runner가 작업 종료 후 uvicorn을 죽이지 못하게 추적 끊기
-          export RUNNER_TRACKING_ID=""
-          
-          # 6. 서버를 백그라운드에서 재실행
-          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+      - name: heimdall-infra에 배포 요청
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: Pr0j3c7-Heimdall/heimdall-infra
+          event-type: trigger-deploy
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "module": "backend"}'
