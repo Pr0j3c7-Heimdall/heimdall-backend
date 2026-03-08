@@ -7,7 +7,9 @@ ENV PYTHONUNBUFFERED=1
 ENV TZ=Asia/Seoul
 
 # 3. Install system dependencies
-RUN apt-get update && apt-get install -y --fix-missing --no-install-recommends \
+RUN sed -i 's/deb.debian.org/mirror.kakao.com/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+    sed -i 's/deb.debian.org/mirror.kakao.com/g' /etc/apt/sources.list 2>/dev/null || true; \
+    apt-get clean && apt-get update && apt-get install -y --fix-missing --no-install-recommends \
     build-essential \
     libmagic1 \
     libgl1 \
