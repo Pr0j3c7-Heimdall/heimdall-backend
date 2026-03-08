@@ -59,8 +59,7 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
     ln -s /shared_data/heimdall-pth/UNet_multi.pth /app/app/ai_pipeline/image/multiclass/UNet/weights/UNet_multi.pth
 
 # 9. c2patool 실행 권한 부여 (절대 경로 사용)
-RUN chmod +x /shared_data/c2patool/c2patool/c2patool && \
-    chmod +x /app/app/ai_pipeline/image/c2pa/c2patool 
+RUN chmod +x /app/app/ai_pipeline/image/c2pa/c2patool
 
 # 10. 이미지 업로드 디렉토리 생성
 RUN mkdir -p /app/uploads 
