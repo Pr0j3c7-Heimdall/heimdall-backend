@@ -23,7 +23,7 @@ WORKDIR /app
 # 5. 파이썬 의존성 패키지 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip gdown && \
-    pip install --no-cache-dir -r requirements.txt [cite: 3]
+    pip install --no-cache-dir -r requirements.txt
 
 # 6. 소스 코드 복사 (현재 폴더의 모든 파일을 /app으로 복사)
 COPY . .
