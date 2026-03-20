@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from app.user.model import User  # noqa: F401 - 테이블 등록용
 from app.image.model import Image  # noqa: F401 - 테이블 등록용
@@ -95,8 +97,7 @@ async def redis_health_check():
         redis = get_redis()
         await redis.ping()
         return SuccessResponse(data={"status": "healthy", "redis": "connected"})
-    except Exception as e:
-        from fastapi import HTTPException
+    except (RedisConnectionError, RedisTimeoutError) as e:
         raise HTTPException(
             status_code=503,
             detail=f"Redis unavailable: {type(e).__name__}: {e!s}",
