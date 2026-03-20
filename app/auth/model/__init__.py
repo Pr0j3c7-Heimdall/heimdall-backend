@@ -1,3 +1,2 @@
-from app.auth.model.refresh_token import RefreshToken
-
-__all__ = ["RefreshToken"]
+# Auth 도메인 모델 (리프레시 토큰은 Redis 사용으로 별도 테이블 없음)
+__all__ = []
