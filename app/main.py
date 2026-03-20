@@ -6,7 +6,6 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.model import RefreshToken  # noqa: F401 - 테이블 등록용
 from app.user.model import User  # noqa: F401 - 테이블 등록용
 from app.image.model import Image  # noqa: F401 - 테이블 등록용
 from app.detection.image.model.image_final_detection_results import ImageFinalDetectionResult  # noqa: F401 - 테이블 등록용
@@ -21,8 +20,11 @@ from app.detection import router as detection_router
 
 from app.common.exception import register_exception_handlers
 from app.common.schema import SuccessResponse
-from app.config import get_auth_settings, get_cors_settings, get_image_settings 
+from redis.asyncio import from_url
+
+from app.config import get_auth_settings, get_cors_settings, get_image_settings, get_redis_settings
 from app.database import get_db, init_db
+from app.redis_client import clear_redis, get_redis, set_redis
 
 
 @asynccontextmanager
@@ -30,7 +32,15 @@ async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행"""
     get_auth_settings()  # fail-fast: 환경 변수 검증
     await init_db()
+
+    redis_settings = get_redis_settings()
+    redis_client = from_url(redis_settings.REDIS_URL, decode_responses=True)
+    set_redis(redis_client)
+
     yield
+
+    await redis_client.aclose()
+    clear_redis()
 
 
 app = FastAPI(
@@ -76,6 +86,21 @@ async def db_health_check(db: AsyncSession = Depends(get_db)):
     """DB 연결 상태 확인"""
     await db.execute(text("SELECT 1"))
     return SuccessResponse(data={"status": "healthy", "database": "connected"})
+
+
+@app.get("/redis-health", response_model=SuccessResponse)
+async def redis_health_check():
+    """Redis 연결 상태 확인"""
+    try:
+        redis = get_redis()
+        await redis.ping()
+        return SuccessResponse(data={"status": "healthy", "redis": "connected"})
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=503,
+            detail=f"Redis unavailable: {type(e).__name__}: {e!s}",
+        )
 
 
 if __name__ == "__main__":
