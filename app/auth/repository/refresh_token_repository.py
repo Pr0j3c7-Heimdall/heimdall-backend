@@ -78,8 +78,10 @@ class RedisRefreshTokenRepository:
             return
         user_id = int(value)
         user_set_key = f"{_RT_USER_PREFIX}{user_id}"
-        await self._redis.delete(key)
-        await self._redis.srem(user_set_key, token_hash)
+        pipe = self._redis.pipeline()
+        pipe.delete(key)
+        pipe.srem(user_set_key, token_hash)
+        await pipe.execute()
 
     async def delete_by_user_id(self, user_id: int) -> None:
         user_set_key = f"{_RT_USER_PREFIX}{user_id}"
