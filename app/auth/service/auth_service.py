@@ -9,7 +9,10 @@ from jose import jwt  # type: ignore[attr-defined]
 from jose.exceptions import JWTError  # type: ignore[attr-defined]
 
 from app.auth.exception import ProviderNotSupportedError
-from app.auth.repository import RefreshTokenRepository, TokenBlacklistRepository
+from app.auth.repository import (
+    RefreshTokenRepositoryProtocol,
+    TokenBlacklistRepository,
+)
 from app.user.model import User, UserStatus
 from app.user.repository import UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
@@ -48,7 +51,7 @@ class AuthService:
     def __init__(
         self,
         user_repository: UserRepository,
-        refresh_token_repository: RefreshTokenRepository,
+        refresh_token_repository: RefreshTokenRepositoryProtocol,
         token_blacklist_repository: TokenBlacklistRepository,
     ):
         self.user_repository = user_repository
@@ -127,7 +130,7 @@ class AuthService:
 
     async def logout(self, request: LogoutRequest, access_token: str) -> None:
         """
-        로그아웃: refresh token 삭제 + access token 블랙리스트 등록 (추후 Redis)
+        로그아웃: refresh token 삭제 + access token 블랙리스트 등록 (Redis)
         """
         await self.refresh_token_repository.delete_by_token(request.refresh_token)
 

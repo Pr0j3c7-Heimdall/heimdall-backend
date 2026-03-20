@@ -1,33 +1,19 @@
-name: Heimdall Deploy
+name: Trigger Deploy to Infra
 
+# 메인 브랜치에 코드가 Push될 때 작동합니다.
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  deploy:
-    runs-on: self-hosted
-
+  notify-infra:
+    runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Environment & Install Dependencies
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          
-          pip install -r requirements.txt
-          
-          cp .env.example .env
-          sed -i 's|^DATABASE_URL=.*|DATABASE_URL=mysql+aiomysql://root:${{ secrets.DB_PASSWORD }}@localhost:3306/heimdall|g' .env
-
-      - name: Restart Uvicorn Server
-        run: |
-          source venv/bin/activate
-          
-          # 기존에 켜져 있는 서버가 있다면 강제 종료 (에러 무시)
-          pkill -f uvicorn || true
-          
-          # 백그라운드에서 서버 켜고, app.log에 로그 저장
-          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+      - name: heimdall-infra에 배포 요청
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          repository: Pr0j3c7-Heimdall/heimdall-infra
+          event-type: trigger-deploy
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "module": "backend"}'

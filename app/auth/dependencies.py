@@ -2,20 +2,21 @@
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import jwt, JWTError
-from sqlalchemy.ext.asyncio import AsyncSession
+from jose import JWTError, jwt
+from redis.asyncio import Redis
 
 from app.common.exception import UnauthorizedException
 from app.config import get_auth_settings
 
 from app.user.model import User, UserStatus
 from app.auth.repository import (
-    NullTokenBlacklistRepository,
-    RefreshTokenRepository,
+    RedisRefreshTokenRepository,
+    RedisTokenBlacklistRepository,
+    RefreshTokenRepositoryProtocol,
     TokenBlacklistRepository,
 )
 from app.auth.service import AuthService
-from app.database import get_db
+from app.redis_client import get_redis_dep
 from app.user.dependencies import get_user_repository
 from app.user.repository import UserRepository
 
@@ -24,12 +25,16 @@ _ALGORITHM = "HS256"
 _http_bearer = HTTPBearer(auto_error=True)
 
 
-def get_refresh_token_repository(db: AsyncSession = Depends(get_db)) -> RefreshTokenRepository:
-    return RefreshTokenRepository(db)
+def get_refresh_token_repository(
+    redis: Redis = Depends(get_redis_dep),
+) -> RefreshTokenRepositoryProtocol:
+    return RedisRefreshTokenRepository(redis)
 
 
-def get_token_blacklist_repository() -> TokenBlacklistRepository:
-    return NullTokenBlacklistRepository()
+def get_token_blacklist_repository(
+    redis: Redis = Depends(get_redis_dep),
+) -> TokenBlacklistRepository:
+    return RedisTokenBlacklistRepository(redis)
 
 
 async def get_current_user_credentials(
@@ -63,7 +68,7 @@ async def get_current_user_credentials(
 
 def get_auth_service(
     user_repo: UserRepository = Depends(get_user_repository),
-    refresh_repo: RefreshTokenRepository = Depends(get_refresh_token_repository),
+    refresh_repo: RefreshTokenRepositoryProtocol = Depends(get_refresh_token_repository),
     token_blacklist_repo: TokenBlacklistRepository = Depends(get_token_blacklist_repository),
 ) -> AuthService:
     return AuthService(user_repo, refresh_repo, token_blacklist_repo)

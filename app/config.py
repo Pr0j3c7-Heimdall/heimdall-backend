@@ -52,6 +52,22 @@ class DatabaseSettings(BaseSettings):
     )
 
 
+class RedisSettings(BaseSettings):
+    """Redis 관련 설정 (리프레시 토큰, 액세스 토큰 블랙리스트)"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    REDIS_URL: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis 연결 URL",
+    )
+
+
 class ImageSettings(BaseSettings):
     """Image 관련 설정"""
 
@@ -82,6 +98,12 @@ def get_cors_settings() -> CorsSettings:
 def get_db_settings() -> DatabaseSettings:
     """DB 설정 조회 (캐싱)"""
     return DatabaseSettings()
+
+
+@lru_cache
+def get_redis_settings() -> RedisSettings:
+    """Redis 설정 조회 (캐싱)"""
+    return RedisSettings()
 
 
 @lru_cache

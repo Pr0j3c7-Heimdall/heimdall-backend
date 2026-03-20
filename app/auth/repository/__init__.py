@@ -1,8 +1,17 @@
-from app.auth.repository.refresh_token_repository import RefreshTokenRepository
-from app.auth.repository.token_blacklist import NullTokenBlacklistRepository, TokenBlacklistRepository
+from app.auth.repository.refresh_token_repository import (
+    RedisRefreshTokenRepository,
+    RefreshTokenRepositoryProtocol,
+)
+from app.auth.repository.token_blacklist import (
+    NullTokenBlacklistRepository,
+    RedisTokenBlacklistRepository,
+    TokenBlacklistRepository,
+)
 
 __all__ = [
     "NullTokenBlacklistRepository",
-    "RefreshTokenRepository",
+    "RedisRefreshTokenRepository",
+    "RedisTokenBlacklistRepository",
+    "RefreshTokenRepositoryProtocol",
     "TokenBlacklistRepository",
 ]
