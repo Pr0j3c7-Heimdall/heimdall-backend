@@ -65,11 +65,10 @@ register_exception_handlers(app)
 image_settings = get_image_settings()
 app.mount("/uploads", StaticFiles(directory=image_settings.UPLOAD_DIR), name="uploads")
 
-app.include_router(auth_router, prefix="/api/v1")
-app.include_router(user_router, prefix="/api/v1")
-app.include_router(image_base_router, prefix="/api/v1")
-app.include_router(detection_router, prefix="/api/v1")
-
+app.include_router(auth_router, prefix="/v1")
+app.include_router(user_router, prefix="/v1")
+app.include_router(image_base_router, prefix="/v1")
+app.include_router(detection_router, prefix="/v1")
 
 @app.get("/", response_model=SuccessResponse)
 async def root():
