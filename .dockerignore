@@ -1,0 +1,84 @@
+# .dockerignore와 .gitignore는 문법이 다르다: git은 슬래시 없는 패턴이 모든 깊이에서
+# 매칭되지만, Docker는 슬래시 없는 패턴을 빌드 컨텍스트 최상위에서만 매칭한다
+# (직접 재현 확인: bare `*.pth`는 루트의 파일만 잡고 `sub/nested.pth`는 못 잡음).
+# 하위 디렉토리까지 잡으려면 `**/` 접두사가 필요하다.
+
+# ----- 가상환경 -----
+**/venv/
+**/.venv/
+**/env/
+**/.env/
+
+# ----- 환경 변수 (민감 정보) -----
+**/.env
+**/.env.local
+**/.env.*.local
+**/*.env
+
+# ----- Python -----
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.so
+**/.Python
+**/build/
+**/develop-eggs/
+**/dist/
+**/downloads/
+**/eggs/
+**/.eggs/
+**/lib/
+**/lib64/
+**/parts/
+**/sdist/
+**/var/
+**/wheels/
+**/*.egg-info/
+**/.installed.cfg
+**/*.egg
+
+# ----- 테스트 / 커버리지 -----
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+**/.tox/
+**/.nox/
+**/coverage.xml
+**/*.cover
+**/.hypothesis/
+
+# ----- IDE -----
+**/.idea/
+**/.vscode/
+**/*.swp
+**/*.swo
+**/*~
+
+# ----- OS -----
+**/.DS_Store
+**/Thumbs.db
+
+# ----- 로그 -----
+**/*.log
+**/logs/
+
+# ----- DB / 로컬 데이터 -----
+**/*.db
+**/*.sqlite3
+**/*.sqlite
+**/uploads/
+
+# ----- AI 가중치 (Dockerfile이 gdown으로 받아서 심볼릭 링크로 배치함) -----
+**/*.pth
+
+# ----- C2PA에 필요한 파일들 -----
+**/*.pem
+**/*.exe
+**/c2patool
+
+# ----- git / 컨테이너 정의 자체는 이미지에 불필요 -----
+.git/
+.github/
+Dockerfile
+docker-compose.yml
+.dockerignore

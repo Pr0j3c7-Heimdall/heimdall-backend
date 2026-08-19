@@ -22,7 +22,7 @@ WORKDIR /app
 
 # 5. 파이썬 의존성 패키지 설치
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip gdown && \
+RUN pip install --no-cache-dir --upgrade pip "gdown==4.7.3" && \
     pip install --no-cache-dir -r requirements.txt
 
 # 6. 소스 코드 복사 (현재 폴더의 모든 파일을 /app으로 복사)
@@ -36,6 +36,12 @@ RUN mkdir -p /shared_data && \
     gdown --id 165r1bSY2AlMgVADh3WdljKpK2XCCTDCX -O /shared_data/c2patool.zip && \
     unzip -o /shared_data/c2patool.zip -d /shared_data/ && \
     rm -f /shared_data/c2patool.zip && \
+    gdown --id 1qF69qznmVZWwOxc8SnJBvj0mPN1lb7UI -O /shared_data/speech_weights.zip && \
+    unzip -o /shared_data/speech_weights.zip -d /shared_data/ && \
+    rm -f /shared_data/speech_weights.zip && \
+    gdown --id 1vlWWsnabjFwTHYvgZhECjj1z2rmpGG3s -O /shared_data/singing_weights.zip && \
+    unzip -o /shared_data/singing_weights.zip -d /shared_data/ && \
+    rm -f /shared_data/singing_weights.zip && \
     chmod -R 777 /shared_data
 
 # 8. 심볼릭 링크 생성
@@ -45,7 +51,12 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
              /app/app/ai_pipeline/image/binary/UNet/weights \
              /app/app/ai_pipeline/image/multiclass/DINOv3/weights \
              /app/app/ai_pipeline/image/multiclass/F3Net/weights \
-             /app/app/ai_pipeline/image/multiclass/UNet/weights && \
+             /app/app/ai_pipeline/image/multiclass/UNet/weights \
+             /app/app/ai_pipeline/audio/speech/SSL_AASIST/weights \
+             /app/app/ai_pipeline/audio/speech/CQCC_SSL_AASIST/weights \
+             /app/app/ai_pipeline/audio/singing/AASIST/weights \
+             /app/app/ai_pipeline/audio/singing/LCNN/weights \
+             /app/app/ai_pipeline/audio/common/RawNet3/weights && \
     # c2patool 관련 링크
     ln -s /shared_data/c2patool/anchors.pem /app/app/ai_pipeline/image/c2pa/anchors.pem && \
     ln -s /shared_data/c2patool/c2patool /app/app/ai_pipeline/image/c2pa/c2patool && \
@@ -53,10 +64,18 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
     ln -s /shared_data/heimdall-pth/DINOv3_binary.pth /app/app/ai_pipeline/image/binary/DINOv3/weights/DINOv3_binary.pth && \
     ln -s /shared_data/heimdall-pth/F3Net_binary.pth /app/app/ai_pipeline/image/binary/F3Net/weights/F3Net_binary.pth && \
     ln -s /shared_data/heimdall-pth/UNet_binary.pth /app/app/ai_pipeline/image/binary/UNet/weights/UNet_binary.pth && \
-    # 다중 분류 모델 가중치 링크 
+    # 다중 분류 모델 가중치 링크
     ln -s /shared_data/heimdall-pth/DINOv3_multi.pth /app/app/ai_pipeline/image/multiclass/DINOv3/weights/DINOv3_multi.pth && \
     ln -s /shared_data/heimdall-pth/F3Net_multi.pth /app/app/ai_pipeline/image/multiclass/F3Net/weights/F3Net_multi.pth && \
-    ln -s /shared_data/heimdall-pth/UNet_multi.pth /app/app/ai_pipeline/image/multiclass/UNet/weights/UNet_multi.pth
+    ln -s /shared_data/heimdall-pth/UNet_multi.pth /app/app/ai_pipeline/image/multiclass/UNet/weights/UNet_multi.pth && \
+    # 음성 트랙 모델 가중치 링크
+    ln -s /shared_data/heimdall-speech-pth/SSL_AASIST_speech.pth /app/app/ai_pipeline/audio/speech/SSL_AASIST/weights/SSL_AASIST_speech.pth && \
+    ln -s /shared_data/heimdall-speech-pth/CQCC_SSL_AASIST_speech.pth /app/app/ai_pipeline/audio/speech/CQCC_SSL_AASIST/weights/CQCC_SSL_AASIST_speech.pth && \
+    ln -s /shared_data/heimdall-speech-pth/RawNet3_speech.pth /app/app/ai_pipeline/audio/common/RawNet3/weights/RawNet3_speech.pth && \
+    # 가창 트랙 모델 가중치 링크
+    ln -s /shared_data/heimdall-singing-pth/AASIST_singing.pth /app/app/ai_pipeline/audio/singing/AASIST/weights/AASIST_singing.pth && \
+    ln -s /shared_data/heimdall-singing-pth/LFCC-LCNN_singing.pth /app/app/ai_pipeline/audio/singing/LCNN/weights/LFCC-LCNN_singing.pth && \
+    ln -s /shared_data/heimdall-singing-pth/RawNet3_singing.pth /app/app/ai_pipeline/audio/common/RawNet3/weights/RawNet3_singing.pth
 
 # 9. c2patool 실행 권한 부여 (절대 경로 사용)
 RUN chmod +x /app/app/ai_pipeline/image/c2pa/c2patool
