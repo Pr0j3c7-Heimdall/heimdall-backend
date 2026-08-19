@@ -9,7 +9,8 @@ from app.detection.audio.service.audio_detection_service import AudioDetectionSe
 import magic
 
 # 모듈 레벨 상수로 분리 (soundfile/libsndfile이 결정적으로 다룰 수 있는 포맷만 허용)
-ALLOWED_MIME_TYPES = frozenset(["audio/x-wav", "audio/wav", "audio/wave", "audio/x-flac", "audio/flac"])
+# flac은 제외: AI 모델 추론 파이프라인에서 검증되지 않아 허용하지 않음
+ALLOWED_MIME_TYPES = frozenset(["audio/x-wav", "audio/wav", "audio/wave", "audio/mpeg", "audio/mp3"])
 ALLOWED_TRACKS = frozenset(t.value for t in AudioTrack)
 
 class AudioService:

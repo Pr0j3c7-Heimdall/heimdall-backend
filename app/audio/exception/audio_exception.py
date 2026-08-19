@@ -6,7 +6,7 @@ class AudioUploadException(BaseAppException):
         super().__init__(HTTP_400_BAD_REQUEST, message, code)
 
 class InvalidAudioFileException(BaseAppException):
-    def __init__(self, message: str = "유효하지 않은 오디오 파일입니다. (지원 형식: wav, flac)", code: str = "INVALID_AUDIO_FILE"):
+    def __init__(self, message: str = "유효하지 않은 오디오 파일입니다. (지원 형식: wav, mp3)", code: str = "INVALID_AUDIO_FILE"):
         super().__init__(HTTP_422_UNPROCESSABLE_ENTITY, message, code)
 
 class InvalidAudioTrackException(BaseAppException):
