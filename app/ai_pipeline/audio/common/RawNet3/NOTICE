@@ -1,0 +1,20 @@
+This directory vendors code from:
+
+Jungjee/RawNet, python/RawNet3
+https://github.com/Jungjee/RawNet
+
+By Jee-weon Jung.
+
+MIT License (see LICENSE).
+
+Vendored files (models/RawNet3.py, models/RawNetBasicBlock.py, models/__init__.py)
+are checked out unmodified.
+
+Upstream RawNet3 is a VoxCeleb speaker-verification model: RawNet3.forward()
+returns an nOut-dim speaker embedding, not a real/fake score. This project's
+train_heimdall.py wraps the vendored backbone with a separate classification
+head (see RawNet3Classifier) to adapt it for the real/fake binary task —
+the wrapper lives in train_heimdall.py, not in the vendored model files.
+
+New dependency introduced by this vendoring: asteroid_filterbanks (used by
+models/RawNet3.py for the learnable sinc front-end, ParamSincFB/Encoder).
