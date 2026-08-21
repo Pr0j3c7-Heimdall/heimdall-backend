@@ -14,10 +14,14 @@ from app.detection.image.model.image_final_detection_results import ImageFinalDe
 from app.detection.image.model.image_binary_detection_results import ImageBinaryDetectionResult  # noqa: F401 - 테이블 등록용
 from app.detection.image.model.image_multiclass_detection_results import ImageMulticlassDetectionResult  # noqa: F401 - 테이블 등록용
 from app.detection.image.model.image_c2pa_analysis_results import ImageC2paAnalysisResult  # noqa: F401 - 테이블 등록용
+from app.audio.model import Audio  # noqa: F401 - 테이블 등록용
+from app.detection.audio.model.audio_final_detection_results import AudioFinalDetectionResult  # noqa: F401 - 테이블 등록용
+from app.detection.audio.model.audio_model_detection_results import AudioModelDetectionResult  # noqa: F401 - 테이블 등록용
 
 from app.auth.router import router as auth_router
 from app.user.router import router as user_router
 from app.image import base_router as image_base_router
+from app.audio import base_router as audio_base_router
 from app.detection import router as detection_router
 
 from app.common.exception import register_exception_handlers
@@ -68,6 +72,7 @@ app.mount("/uploads", StaticFiles(directory=image_settings.UPLOAD_DIR), name="up
 app.include_router(auth_router, prefix="/v1")
 app.include_router(user_router, prefix="/v1")
 app.include_router(image_base_router, prefix="/v1")
+app.include_router(audio_base_router, prefix="/v1")
 app.include_router(detection_router, prefix="/v1")
 
 @app.get("/", response_model=SuccessResponse)

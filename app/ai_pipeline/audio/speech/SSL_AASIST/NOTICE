@@ -1,0 +1,45 @@
+This directory vendors code from:
+
+TakHemlata/SSL_Anti-spoofing
+https://github.com/TakHemlata/SSL_Anti-spoofing
+
+By Hemlata Tak (tak@eurecom.fr), EURECOM.
+Paper: "Automatic speaker verification spoofing and deepfake detection using
+wav2vec 2.0 and data augmentation" (Odyssey 2022). https://arxiv.org/abs/2202.12233
+
+MIT License (see LICENSE).
+
+model.py is checked out with one functional patch: the SSLModel class.
+
+Original SSLModel loaded a local wav2vec 2.0 XLSR (300M) checkpoint via
+fairseq.checkpoint_utils.load_model_ensemble_and_task(['xlsr2_300m.pt']),
+requiring fairseq to be installed from the pinned commit bundled in the
+upstream repo (fairseq-a54021305d6b3c4c5959ac9395135f63202db8f1/).
+
+That install path does not work with a current pip: fairseq 1.0.0a0 pins
+omegaconf<2.1, and the omegaconf 2.0.x wheels on PyPI have malformed
+metadata (`PyYAML (>=5.1.*)` is not a valid version specifier) that modern
+pip rejects outright — confirmed by attempting both `pip install fairseq`
+(PyPI sdist fails to build: missing fairseq/version.txt, a known long-
+standing packaging bug) and an editable install from the vendored fairseq
+source (dependency resolution failure on omegaconf). This is a widely
+reported problem with pinned-era fairseq on modern Python/pip, not
+specific to this project's environment.
+
+Patch: SSLModel now loads facebook/wav2vec2-xls-r-300m via HuggingFace
+transformers (Wav2Vec2Model) instead of fairseq. This is the same
+underlying XLS-R architecture/pretraining lineage, with matching
+hidden_size=1024 (verified against the original fairseq path's
+self.out_dim = 1024, so the downstream nn.Linear(1024, 128) projection
+and the rest of the AASIST back-end are unaffected). extract_feat()'s
+input/output contract (waveform in, (batch, frames, 1024) features out)
+is unchanged, so no other code in this file needed to change.
+
+The AASIST back-end (GraphAttentionLayer, HtrgGraphAttentionLayer,
+GraphPool, Residual_block, Model) is untouched vendored code — same
+architecture as clovaai/aasist (also vendored separately in AASIST/),
+by the same author group (Jee-weon Jung et al.).
+
+New dependency introduced by this vendoring: transformers (replacing the
+fairseq requirement). The pretrained facebook/wav2vec2-xls-r-300m weights
+(~1.2GB) download automatically on first use via huggingface_hub.

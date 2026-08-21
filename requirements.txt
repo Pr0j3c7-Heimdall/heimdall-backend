@@ -48,3 +48,8 @@ diffusers>=0.21.0
 scikit-learn>=1.3.0
 accelerate>=0.24.0
 huggingface-hub>=0.17.0
+
+# AI Models - Audio (음성 판별: SSL-AASIST, RawNet3, CQCC-SSL-AASIST)
+soundfile>=0.12.0
+spafe>=0.3.3
+asteroid-filterbanks>=0.4.0

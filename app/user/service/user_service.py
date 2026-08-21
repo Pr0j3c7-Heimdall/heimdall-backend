@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from typing import Optional
 from app.user.repository import UserRepository
-from app.user.schema.response.history import ImageHistoryData, ImageHistoryItem
+from app.user.schema.response.history import ImageHistoryData, ImageHistoryItem, AudioHistoryData, AudioHistoryItem
 
 
 class UserService:
@@ -45,6 +45,48 @@ class UserService:
             )
 
         return ImageHistoryData(
+            total_count=total_count,
+            total_pages=total_pages,
+            current_page=page,
+            histories=histories
+        )
+
+    async def get_audio_history(
+        self,
+        user_id: int,
+        page: int = 1,
+        size: int = 10,
+        keyword: Optional[str] = None,
+        result_type: Optional[str] = None
+    ) -> AudioHistoryData:
+        """사용자의 오디오 검증 내역을 조회함"""
+        total_count, rows = await self.user_repository.get_audio_detection_history(
+            user_id=user_id,
+            page=page,
+            size=size,
+            keyword=keyword,
+            result_type=result_type
+        )
+
+        total_pages = math.ceil(total_count / size) if total_count > 0 else 0
+
+        histories = []
+        for audio, summary in rows:
+            histories.append(
+                AudioHistoryItem(
+                    history_id=summary.id,
+                    audio_id=audio.id,
+                    filename=audio.filename,
+                    file_type="audio",
+                    track=audio.track,
+                    analysis_status=summary.analysis_status,
+                    is_ai=summary.final_is_ai,
+                    ai_probability=summary.final_ai_probability,
+                    created_at=audio.created_at
+                )
+            )
+
+        return AudioHistoryData(
             total_count=total_count,
             total_pages=total_pages,
             current_page=page,

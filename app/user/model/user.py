@@ -27,3 +27,4 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     images = relationship("Image", back_populates="owner") # Image와의 관계 추가
+    audios = relationship("Audio", back_populates="owner") # Audio와의 관계 추가

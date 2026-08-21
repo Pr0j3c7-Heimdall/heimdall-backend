@@ -1,0 +1,33 @@
+This directory vendors code from:
+
+asvspoof-challenge/2021, LA/Baseline-LFCC-LCNN
+https://github.com/asvspoof-challenge/2021
+(tailored from https://github.com/nii-yamagishilab/project-NN-Pytorch-scripts)
+
+By Xin Wang, National Institute of Informatics.
+
+BSD 3-Clause License (see LICENSE).
+
+All files are checked out unmodified, except for one function in
+sandbox/util_dsp.py: dct()'s `Vc = torch.rfft(v, 1, onesided=False)` was
+replaced with `Vc = torch.view_as_real(torch.fft.fft(v, dim=1))`.
+torch.rfft/irfft (the pre-1.8 complex-as-extra-dim FFT API) was removed in
+PyTorch>=1.8; this baseline was written against PyTorch 1.6 (see README.md).
+onesided=False on a real input is mathematically a full complex DFT, so
+torch.fft.fft + view_as_real reproduces the exact same (..., N, 2) real/imag
+tensor with identical values — no formula changed, only the API used to
+compute it.
+
+dct1(), idct1(), and idct() in the same file still call the removed
+torch.rfft/torch.irfft and were left unpatched, since heimdall-vox only
+exercises dct() (via LinearDCT(..., 'dct', ...) in sandbox/util_frontend.py's
+LFCC front-end) — those three functions are unreachable dead code on this
+path. If a future change starts using them, they will need the same kind of
+patch.
+
+sandbox/util_frontend.py's LFCC.forward() also had a torch>=2.0 compat patch:
+`torch.stft(..., onesided=True, pad_mode="constant")` stopped defaulting to a
+real (..., 2) tensor and now requires `return_complex` to be given. Added
+`return_complex=True` and wrapped the call in `torch.view_as_real(...)` so
+the output shape/values are identical to before — the rest of forward()
+(torch.norm(x_stft, 2, -1) etc.) is untouched.
