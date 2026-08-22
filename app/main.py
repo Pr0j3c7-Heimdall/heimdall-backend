@@ -54,6 +54,9 @@ app = FastAPI(
     description="Heimdall Backend API",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
+    openapi_url="/api/v1/openapi.json",
 )
 cors = get_cors_settings()
 app.add_middleware(
