@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,10 +55,46 @@ app = FastAPI(
     description="Heimdall Backend API",
     version="0.1.0",
     lifespan=lifespan,
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc",
+    docs_url=None,  # 아래에서 직접 제공 (_openapi_url_for 주석 참고)
+    redoc_url=None,
     openapi_url="/api/v1/openapi.json",
 )
+
+
+def _openapi_url_for(request: Request) -> str:
+    """docs 페이지가 참조할 openapi.json 주소를 접속 경로에 맞춰 결정한다.
+
+    프론트엔드의 next.config.mjs rewrite가 '/api/:path*'를 'backend:8000/:path*'로
+    넘기면서 경로에서 /api를 한 번 벗겨낸다. 그래서 도메인으로 접속한 경우에는
+    브라우저가 /api가 하나 더 붙은 주소를 요청해야 백엔드의 /api/v1/openapi.json에
+    도달한다. 반대로 포트로 직접 붙은 경우(localhost:8000)에는 rewrite가 없으므로
+    접두사를 붙이면 안 된다. 고정값으로 두면 둘 중 한쪽이 반드시 404가 난다.
+
+    TODO: 백엔드를 api 서브도메인으로 분리해 rewrite가 사라지면 이 분기는 제거할 것.
+    """
+    host = request.headers.get("host", "").split(":")[0]
+    prefix = "" if host in ("localhost", "127.0.0.1") else "/api"
+    return f"{prefix}/api/v1/openapi.json"
+
+
+@app.get("/api/v1/docs", include_in_schema=False)
+async def swagger_ui_html(request: Request):
+    """Swagger UI (내장 docs_url 대체)"""
+    return get_swagger_ui_html(
+        openapi_url=_openapi_url_for(request),
+        title=f"{app.title} - Swagger UI",
+    )
+
+
+@app.get("/api/v1/redoc", include_in_schema=False)
+async def redoc_html(request: Request):
+    """ReDoc (내장 redoc_url 대체)"""
+    return get_redoc_html(
+        openapi_url=_openapi_url_for(request),
+        title=f"{app.title} - ReDoc",
+    )
+
+
 cors = get_cors_settings()
 app.add_middleware(
     CORSMiddleware,
