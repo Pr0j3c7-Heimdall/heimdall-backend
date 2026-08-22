@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,33 +56,44 @@ app = FastAPI(
     description="Heimdall Backend API",
     version="0.1.0",
     lifespan=lifespan,
-    docs_url=None,  # 아래에서 직접 제공 (_openapi_url_for 주석 참고)
+    docs_url=None,  # 아래에서 직접 제공 (_proxy_prefix 주석 참고)
     redoc_url=None,
-    openapi_url="/api/v1/openapi.json",
+    openapi_url=None,
 )
 
 
-def _openapi_url_for(request: Request) -> str:
-    """docs 페이지가 참조할 openapi.json 주소를 접속 경로에 맞춰 결정한다.
+def _proxy_prefix(request: Request) -> str:
+    """이 요청이 프론트엔드 rewrite를 거쳐 왔다면 보정해야 할 경로 접두사.
 
     프론트엔드의 next.config.mjs rewrite가 '/api/:path*'를 'backend:8000/:path*'로
-    넘기면서 경로에서 /api를 한 번 벗겨낸다. 그래서 도메인으로 접속한 경우에는
-    브라우저가 /api가 하나 더 붙은 주소를 요청해야 백엔드의 /api/v1/openapi.json에
-    도달한다. 반대로 포트로 직접 붙은 경우(localhost:8000)에는 rewrite가 없으므로
-    접두사를 붙이면 안 된다. 고정값으로 두면 둘 중 한쪽이 반드시 404가 난다.
+    넘기면서 경로에서 /api를 한 번 벗겨낸다. 따라서 도메인으로 접속한 브라우저는
+    /api가 하나 더 붙은 주소를 요청해야 백엔드의 실제 경로에 도달한다.
+    포트로 직접 붙은 경우(localhost:8000)에는 rewrite가 없으므로 접두사가 없어야 한다.
+    고정값으로 두면 두 경로 중 한쪽이 반드시 404가 된다.
 
     TODO: 백엔드를 api 서브도메인으로 분리해 rewrite가 사라지면 이 분기는 제거할 것.
     """
     host = request.headers.get("host", "").split(":")[0]
-    prefix = "" if host in ("localhost", "127.0.0.1") else "/api"
-    return f"{prefix}/api/v1/openapi.json"
+    return "" if host in ("localhost", "127.0.0.1") else "/api"
+
+
+@app.get("/api/v1/openapi.json", include_in_schema=False)
+async def openapi_json(request: Request):
+    """OpenAPI 스펙 (내장 openapi_url 대체).
+
+    servers를 접속 경로에 맞춰 채워 넣는다. 이 값이 없으면 Swagger UI의
+    'Try it out'이 /api/v1/... 을 그대로 호출해 rewrite에 /api를 뺏기고 404가 난다.
+    """
+    schema = dict(app.openapi())  # 캐시된 스키마를 건드리지 않도록 얕은 복사
+    schema["servers"] = [{"url": _proxy_prefix(request) or "/"}]
+    return JSONResponse(schema)
 
 
 @app.get("/api/v1/docs", include_in_schema=False)
 async def swagger_ui_html(request: Request):
     """Swagger UI (내장 docs_url 대체)"""
     return get_swagger_ui_html(
-        openapi_url=_openapi_url_for(request),
+        openapi_url=f"{_proxy_prefix(request)}/api/v1/openapi.json",
         title=f"{app.title} - Swagger UI",
     )
 
@@ -90,7 +102,7 @@ async def swagger_ui_html(request: Request):
 async def redoc_html(request: Request):
     """ReDoc (내장 redoc_url 대체)"""
     return get_redoc_html(
-        openapi_url=_openapi_url_for(request),
+        openapi_url=f"{_proxy_prefix(request)}/api/v1/openapi.json",
         title=f"{app.title} - ReDoc",
     )
 
