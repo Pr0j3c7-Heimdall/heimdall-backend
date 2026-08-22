@@ -68,7 +68,7 @@
 **/*.sqlite
 **/uploads/
 
-# ----- AI 가중치 (Dockerfile이 gdown으로 받아서 심볼릭 링크로 배치함) -----
+# ----- AI 가중치 (compose의 init 서비스가 heimdall-vol에 받고, Dockerfile은 심볼릭 링크만 건다) -----
 **/*.pth
 
 # ----- C2PA에 필요한 파일들 -----

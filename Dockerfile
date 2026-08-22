@@ -21,30 +21,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app 
 
 # 5. 파이썬 의존성 패키지 설치
+RUN pip install --no-cache-dir --upgrade pip
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip "gdown==4.7.3" && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # 6. 소스 코드 복사 (현재 폴더의 모든 파일을 /app으로 복사)
 COPY . .
 
-# 7. AI 가중치 및 c2patool 다운로드 (공용 볼륨 /shared_data 사용)
-RUN mkdir -p /shared_data && \
-    gdown --id 1_nj67GnQBYgBYem8DVS8YVm9lFI99Yss -O /shared_data/weights.zip && \
-    unzip -o /shared_data/weights.zip -d /shared_data/ && \
-    rm -f /shared_data/weights.zip && \
-    gdown --id 165r1bSY2AlMgVADh3WdljKpK2XCCTDCX -O /shared_data/c2patool.zip && \
-    unzip -o /shared_data/c2patool.zip -d /shared_data/ && \
-    rm -f /shared_data/c2patool.zip && \
-    gdown --id 1qF69qznmVZWwOxc8SnJBvj0mPN1lb7UI -O /shared_data/speech_weights.zip && \
-    unzip -o /shared_data/speech_weights.zip -d /shared_data/ && \
-    rm -f /shared_data/speech_weights.zip && \
-    gdown --id 1vlWWsnabjFwTHYvgZhECjj1z2rmpGG3s -O /shared_data/singing_weights.zip && \
-    unzip -o /shared_data/singing_weights.zip -d /shared_data/ && \
-    rm -f /shared_data/singing_weights.zip && \
-    chmod -R 777 /shared_data
+# 7. AI 가중치 및 c2patool은 빌드 타임에 받지 않는다.
+#    docker-compose 의 init 서비스(init.sh)가 heimdall-vol 볼륨에 1회 다운로드하고,
+#    런타임에 그 볼륨이 /shared_data 에 마운트된다.
+#    (예전에는 여기서도 같은 zip 4개를 받았지만, 볼륨 마운트가 그대로 덮어써서
+#     이미지 용량과 빌드 시간만 낭비하고 실제로는 쓰이지 않았다.)
 
-# 8. 심볼릭 링크 생성
+# 8. 심볼릭 링크 생성 (대상은 런타임에 /shared_data 볼륨으로 채워진다)
 RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
              /app/app/ai_pipeline/image/binary/DINOv3/weights \
              /app/app/ai_pipeline/image/binary/F3Net/weights \
@@ -77,10 +67,10 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
     ln -s /shared_data/heimdall-singing-pth/LFCC-LCNN_singing.pth /app/app/ai_pipeline/audio/singing/LCNN/weights/LFCC-LCNN_singing.pth && \
     ln -s /shared_data/heimdall-singing-pth/RawNet3_singing.pth /app/app/ai_pipeline/audio/common/RawNet3/weights/RawNet3_singing.pth
 
-# 9. c2patool 실행 권한 부여 (절대 경로 사용)
-RUN chmod +x /app/app/ai_pipeline/image/c2pa/c2patool
+# 9. c2patool 실행 권한은 init.sh 의 `chmod -R 777 /shared_data` 가 부여한다.
+#    (빌드 시점에는 심볼릭 링크의 대상 파일이 아직 없어 chmod 가 실패한다)
 
-# 10. 이미지 업로드 디렉토리 생성
+# 10. 이미지 업로드 디렉토리 생성 (compose 의 uploads-data 볼륨이 마운트되는 지점)
 RUN mkdir -p /app/uploads 
 
 EXPOSE 8000
