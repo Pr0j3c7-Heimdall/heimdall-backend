@@ -56,10 +56,8 @@ class AudioDetectionService:
                 claim_generator=c2pa_obj.claim_generator,
                 claim_generator_info_name=c2pa_obj.claim_generator_info_name,
                 synth_id=c2pa_obj.synth_id,
-                visible_watermark=c2pa_obj.visible_watermark,
                 total_digital_source_type=c2pa_obj.total_digital_source_type,
                 synth_id_digital_source_type=c2pa_obj.synth_id_digital_source_type,
-                visible_watermark_digital_source_type=c2pa_obj.visible_watermark_digital_source_type,
             )
 
         model_results = []

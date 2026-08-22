@@ -84,7 +84,11 @@ class AudioDetectionRepository:
         return status
 
     async def save_c2pa_result(self, audio_id: int, data: dict) -> None:
-        """C2PA 분석 결과를 저장함 (이미지 쪽 save_c2pa_result와 동일한 컬럼 구성)"""
+        """C2PA 분석 결과를 저장함.
+
+        분석기는 이미지/오디오 공용이라 visible_watermark 계열도 함께 반환하지만,
+        오디오에서는 성립하지 않는 값이라 저장하지 않는다.
+        """
         c2pa_result = AudioC2paAnalysisResult(
             audio_id=audio_id,
             is_c2pa_compliant=data.get("is_c2pa_compliant"),
@@ -94,10 +98,8 @@ class AudioDetectionRepository:
             claim_generator=data.get("claim_generator"),
             claim_generator_info_name=data.get("claim_generator_info_name"),
             synth_id=data.get("synth_id"),
-            visible_watermark=data.get("visible_watermark"),
             total_digital_source_type=data.get("total_digital_source_type"),
             synth_id_digital_source_type=data.get("synth_id_digital_source_type"),
-            visible_watermark_digital_source_type=data.get("visible_watermark_digital_source_type"),
         )
         self.db_session.add(c2pa_result)
         await self.db_session.commit()
