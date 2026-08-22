@@ -8,6 +8,7 @@ fusion JSON의 "method"에 따라 결합한다(공용 로직은 common/fusion_co
 음성(Speech) 트랙은 모델 구성이 다르고, 음성/가창을 나누는 YAMNet 라우팅도 아직 구현되지
 않아(임계값 미확정) 이 파이프라인은 현재 가창 트랙만 다룬다.
 """
+import asyncio
 import json
 import logging
 import os
@@ -92,7 +93,7 @@ async def run_singing_detection(audio_path: str) -> Dict[str, Any]:
     raw_scores: Dict[str, float] = {}
     for name in order:
         detector = _DETECTOR_NAMES[name]()
-        raw_scores[name] = detector.predict(audio_path)
+        raw_scores[name] = await asyncio.to_thread(detector.predict, audio_path)
 
     calibrated = calibrate(raw_scores, _singing_fusion, order)
     final_prob = combine_scores(calibrated, _singing_fusion, order)

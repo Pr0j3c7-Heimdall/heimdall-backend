@@ -159,17 +159,17 @@ async def run_binary_detection(image_path: str) -> Dict[str, Any]:
     
     # 1. DINOv3 실행
     if dinov3_detector:
-        res_dino = dinov3_detector.predict(image_path)
+        res_dino = await asyncio.to_thread(dinov3_detector.predict, image_path)
         results.append(res_dino)
     
     # 2. F3-Net 실행
     if f3net_detector:
-        res_f3 = f3net_detector.predict(image_path)
+        res_f3 = await asyncio.to_thread(f3net_detector.predict, image_path)
         results.append(res_f3)
 
     # 3. UNet 실행
     if unet_detector:
-        res_unet = unet_detector.predict(image_path)
+        res_unet = await asyncio.to_thread(unet_detector.predict, image_path)
         results.append(res_unet)
     
     if not results:
@@ -192,7 +192,7 @@ async def run_multiclass_detection(image_path: str) -> List[Dict[str, Any]]:
     # 1. DINOv3 다중 분류
     if dinov3_multi_detector:
         try:
-            res_dino = dinov3_multi_detector.predict(image_path)
+            res_dino = await asyncio.to_thread(dinov3_multi_detector.predict, image_path)
             results.append(res_dino)
         except Exception as e:
             logging.error(f"DINOv3 Multiclass Error: {e}", exc_info=True)
@@ -200,7 +200,7 @@ async def run_multiclass_detection(image_path: str) -> List[Dict[str, Any]]:
     # 2. F3Net 다중 분류
     if f3net_multi_detector:
         try:
-            res_f3 = f3net_multi_detector.predict(image_path)
+            res_f3 = await asyncio.to_thread(f3net_multi_detector.predict, image_path)
             results.append(res_f3)
         except Exception as e:
             logging.error(f"F3Net Multiclass Error: {e}", exc_info=True)
@@ -208,7 +208,7 @@ async def run_multiclass_detection(image_path: str) -> List[Dict[str, Any]]:
     # 3. UNet 다중 분류
     if unet_multi_detector:
         try:
-            res_unet = unet_multi_detector.predict(image_path)
+            res_unet = await asyncio.to_thread(unet_multi_detector.predict, image_path)
             results.append(res_unet)
         except Exception as e:
             logging.error(f"UNet Multiclass Error: {e}", exc_info=True)
