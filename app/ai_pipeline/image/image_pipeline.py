@@ -135,7 +135,7 @@ async def run_c2pa_analysis(image_path: str) -> Dict[str, Any]:
     if C2PAAnalyzer:
         try:
             # 동기 함수 블로킹 방지를 위해 별도의 스레드(executor)에서 실행
-            return await asyncio.get_event_loop().run_in_executor(None, C2PAAnalyzer.analyze_image, image_path)
+            return await asyncio.get_event_loop().run_in_executor(None, C2PAAnalyzer.analyze_file, image_path)
         except Exception as e:
             logging.error(f"C2PA Analysis Error: {e}", exc_info=True)
     

@@ -1,10 +1,11 @@
 from ..repository.audio_detection_repository import AudioDetectionRepository
 from ..exception.audio_detection_exception import AudioAnalysisNotFoundException, AudioForbiddenAccessException
 from ..schema.response.audio_status import AudioDetectionStatusData
-from ..schema.response.audio_result import AudioDetectionResultData, ModelResultSchema
+from ..schema.response.audio_result import AudioDetectionResultData, C2PAResultSchema, ModelResultSchema
 from ..model.audio_final_detection_results import AudioAnalysisStatus
 from app.ai_pipeline.audio.speech_pipeline import run_speech_detection
 from app.ai_pipeline.audio.singing_pipeline import run_singing_detection
+from app.ai_pipeline.audio.audio_c2pa import run_c2pa_analysis
 
 from datetime import datetime, timezone
 import logging
@@ -43,6 +44,24 @@ class AudioDetectionService:
         if not summary or summary.analysis_status != AudioAnalysisStatus.COMPLETED:
             raise AudioAnalysisNotFoundException(message="분석이 완료되지 않았거나 오디오를 찾을 수 없습니다.")
 
+        c2pa_data = None
+        if audio.c2pa_result:
+            c2pa_obj = audio.c2pa_result
+            c2pa_data = C2PAResultSchema(
+                c2pa_id=c2pa_obj.id,
+                is_c2pa_compliant=c2pa_obj.is_c2pa_compliant,
+                created_model=c2pa_obj.created_model,
+                converted_model=c2pa_obj.converted_model,
+                created_description=c2pa_obj.created_description,
+                claim_generator=c2pa_obj.claim_generator,
+                claim_generator_info_name=c2pa_obj.claim_generator_info_name,
+                synth_id=c2pa_obj.synth_id,
+                visible_watermark=c2pa_obj.visible_watermark,
+                total_digital_source_type=c2pa_obj.total_digital_source_type,
+                synth_id_digital_source_type=c2pa_obj.synth_id_digital_source_type,
+                visible_watermark_digital_source_type=c2pa_obj.visible_watermark_digital_source_type,
+            )
+
         model_results = []
         if audio.model_results:
             model_results = [
@@ -61,6 +80,7 @@ class AudioDetectionService:
             final_is_ai=summary.final_is_ai,
             final_ai_probability=summary.final_ai_probability,
             completed_at=summary.completed_at,
+            c2pa=c2pa_data,
             models=model_results
         )
 
@@ -70,6 +90,34 @@ class AudioDetectionService:
         """
         logging.info(f"DEBUG: Starting AI detection for audio ID: {audio_id} (track={track})")
 
+        # 1단계: C2PA 검증 (이미지 파이프라인과 동일한 위치·의미)
+        async with AsyncSessionLocal() as session:
+            repo = AudioDetectionRepository(session)
+            await repo.update_analysis_status(audio_id=audio_id, status=AudioAnalysisStatus.C2PA_PROCESSING)
+
+        c2pa_data = await run_c2pa_analysis(audio_path)
+        async with AsyncSessionLocal() as session:
+            repo = AudioDetectionRepository(session)
+            await repo.save_c2pa_result(audio_id=audio_id, data=c2pa_data)
+
+        if c2pa_data.get("is_c2pa_compliant"):
+            # 신뢰할 수 있는 서명으로 AI 생성이 선언된 경우. 모델 판별을 건너뛰고 확정한다.
+            # (is_c2pa_compliant=False는 "AI가 아니다"가 아니라 "판단 근거가 없다"이므로
+            #  아래 모델 판별로 진행한다.)
+            logging.info(f"DEBUG: C2PA compliant, skipping model detection for audio ID: {audio_id}")
+            async with AsyncSessionLocal() as session:
+                repo = AudioDetectionRepository(session)
+                await repo.update_analysis_status(
+                    audio_id=audio_id,
+                    status=AudioAnalysisStatus.COMPLETED,
+                    final_is_ai=True,
+                    final_ai_probability=1.0,
+                    completed_at=datetime.now(timezone.utc)
+                )
+            logging.info(f"DEBUG: AI detection COMPLETED for audio ID: {audio_id} (C2PA)")
+            return
+
+        # 2단계: 트랙별 모델 판별
         async with AsyncSessionLocal() as session:
             repo = AudioDetectionRepository(session)
             await repo.update_analysis_status(audio_id=audio_id, status=AudioAnalysisStatus.PROCESSING)

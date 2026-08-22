@@ -295,10 +295,15 @@ class C2PAAnalyzer:
         return s if len(s) <= maxlen else s[: maxlen - 1] + "_"
     
     @staticmethod
-    def analyze_image(image_path: str) -> Dict[str, Any]:
-        """이미지를 분석하여 C2PA 준수 여부 및 관련 메타데이터를 추출합니다."""
-        p = Path(image_path)
-        logging.info(f"C2PA: Analyzing image at {image_path}")
+    def analyze_file(file_path: str) -> Dict[str, Any]:
+        """파일을 분석하여 C2PA 준수 여부 및 관련 메타데이터를 추출합니다.
+
+        c2patool이 포맷을 판별하므로 이미지/오디오 등 지원 포맷이면 그대로 사용할 수 있다.
+        AI 생성 여부는 매니페스트의 c2pa.created 액션에 IPTC trainedAlgorithmicMedia가
+        선언되어 있고(ai_declared), 서명·바인딩·신뢰 검증을 모두 통과한 경우에만 참이다.
+        """
+        p = Path(file_path)
+        logging.info(f"C2PA: Analyzing file at {file_path}")
         logging.info(f"C2PA: Using tool at {C2PATOOL_EXE}")
         
         default_res = {
@@ -316,18 +321,18 @@ class C2PAAnalyzer:
         }
         
         if not p.exists():
-            logging.error(f"C2PA: Image file not found: {image_path}")
+            logging.error(f"C2PA: File not found: {file_path}")
             return default_res
 
-        abs_image_path = str(p.resolve())
+        abs_file_path = str(p.resolve())
 
         try:
             # 1. Manifest JSON 추출
-            rc, out, err = run_cmd([C2PATOOL_EXE, abs_image_path], cwd=str(BASE_DIR))
+            rc, out, err = run_cmd([C2PATOOL_EXE, abs_file_path], cwd=str(BASE_DIR))
             logging.info(f"C2PA: Manifest extraction RC={rc}")
             if rc != 0:
                 if is_no_claim_found(err):
-                    logging.info("C2PA: No C2PA claim found in image.")
+                    logging.info("C2PA: No C2PA claim found in file.")
                     return default_res
                 logging.error(f"C2PA: c2patool failed rc={rc}: {err}")
                 return default_res
@@ -341,7 +346,7 @@ class C2PAAnalyzer:
             # 2. Trust 검증
             ta = normalize_trust_arg(TRUST_ANCHORS)
             logging.info(f"C2PA: Using trust anchors at {ta}")
-            t_rc, t_out, t_err = run_cmd([C2PATOOL_EXE, abs_image_path, "trust", "--trust_anchors", ta], cwd=str(BASE_DIR))
+            t_rc, t_out, t_err = run_cmd([C2PATOOL_EXE, abs_file_path, "trust", "--trust_anchors", ta], cwd=str(BASE_DIR))
             logging.info(f"C2PA: Trust validation RC={t_rc}")
             
             if t_rc != 0:
@@ -378,3 +383,7 @@ class C2PAAnalyzer:
         except Exception as e:
             logging.error(f"C2PA: Error during analysis: {e}", exc_info=True)
             return default_res
+
+
+    # 이미지 전용이던 시절의 이름. 기존 호출부 호환을 위해 남겨둔다.
+    analyze_image = analyze_file

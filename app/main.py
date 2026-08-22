@@ -19,6 +19,7 @@ from app.detection.image.model.image_c2pa_analysis_results import ImageC2paAnaly
 from app.audio.model import Audio  # noqa: F401 - 테이블 등록용
 from app.detection.audio.model.audio_final_detection_results import AudioFinalDetectionResult  # noqa: F401 - 테이블 등록용
 from app.detection.audio.model.audio_model_detection_results import AudioModelDetectionResult  # noqa: F401 - 테이블 등록용
+from app.detection.audio.model.audio_c2pa_analysis_results import AudioC2paAnalysisResult  # noqa: F401 - 테이블 등록용
 
 from app.auth.router import router as auth_router
 from app.user.router import router as user_router

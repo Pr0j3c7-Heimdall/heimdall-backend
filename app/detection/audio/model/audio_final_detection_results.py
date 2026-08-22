@@ -5,6 +5,7 @@ from app.database import Base
 
 class AudioAnalysisStatus(str, Enum):
     PENDING = "PENDING"
+    C2PA_PROCESSING = "C2PA_PROCESSING"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
 

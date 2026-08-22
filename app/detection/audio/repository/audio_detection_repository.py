@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING
 # 순환 참조 방지를 위해 상대 경로 또는 직접 경로 사용
 from ..model.audio_final_detection_results import AudioFinalDetectionResult, AudioAnalysisStatus
 from ..model.audio_model_detection_results import AudioModelDetectionResult
+from ..model.audio_c2pa_analysis_results import AudioC2paAnalysisResult
 
 if TYPE_CHECKING:
     from app.audio.model.audio import Audio
@@ -41,7 +42,8 @@ class AudioDetectionRepository:
             .where(Audio.id == audio_id)
             .options(
                 selectinload(Audio.analysis_summary),
-                selectinload(Audio.model_results)
+                selectinload(Audio.model_results),
+                selectinload(Audio.c2pa_result)
             )
         )
         result = await self.db_session.execute(stmt)
@@ -80,6 +82,25 @@ class AudioDetectionRepository:
             return "FORBIDDEN"
 
         return status
+
+    async def save_c2pa_result(self, audio_id: int, data: dict) -> None:
+        """C2PA 분석 결과를 저장함 (이미지 쪽 save_c2pa_result와 동일한 컬럼 구성)"""
+        c2pa_result = AudioC2paAnalysisResult(
+            audio_id=audio_id,
+            is_c2pa_compliant=data.get("is_c2pa_compliant"),
+            created_model=data.get("created_model"),
+            converted_model=data.get("converted_model"),
+            created_description=data.get("created_description"),
+            claim_generator=data.get("claim_generator"),
+            claim_generator_info_name=data.get("claim_generator_info_name"),
+            synth_id=data.get("synth_id"),
+            visible_watermark=data.get("visible_watermark"),
+            total_digital_source_type=data.get("total_digital_source_type"),
+            synth_id_digital_source_type=data.get("synth_id_digital_source_type"),
+            visible_watermark_digital_source_type=data.get("visible_watermark_digital_source_type"),
+        )
+        self.db_session.add(c2pa_result)
+        await self.db_session.commit()
 
     async def save_model_result(self, audio_id: int, data_list: list) -> None:
         """모델별 판별 결과들을 리스트 단위로 저장함"""
