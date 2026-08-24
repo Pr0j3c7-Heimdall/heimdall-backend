@@ -19,8 +19,9 @@ class Audio(Base):
     filename = Column(String(255), nullable=False)
     filepath = Column(String(500), nullable=False)
     audio_url = Column(String(500), nullable=False)
-    # 음성/가창 라우팅이 자동화되지 않아(YAMNet 임계값 미확정) 업로드 시 클라이언트가 지정함
-    track = Column(String(20), nullable=False)
+    # 업로드 직후에는 NULL. C2PA 통과로 모델 판별을 건너뛰거나(C2PA 준수) YAMNet이 예외로
+    # 판정한 파일(UNSUPPORTED)은 끝까지 NULL로 남는다 — YAMNet Type 판별을 통과한 경우에만 채워짐
+    track = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

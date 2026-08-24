@@ -83,6 +83,13 @@ class AudioDetectionRepository:
 
         return status
 
+    async def update_audio_track(self, audio_id: int, track: str) -> None:
+        """YAMNet Type 판별 결과로 audios.track을 채움 (업로드 시 클라이언트가 지정하던 것을 대체)"""
+        from app.audio.model.audio import Audio
+        stmt = update(Audio).where(Audio.id == audio_id).values(track=track)
+        await self.db_session.execute(stmt)
+        await self.db_session.commit()
+
     async def save_c2pa_result(self, audio_id: int, data: dict) -> None:
         """C2PA 분석 결과를 저장함.
 

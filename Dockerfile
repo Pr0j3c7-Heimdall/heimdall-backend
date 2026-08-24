@@ -46,7 +46,8 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
              /app/app/ai_pipeline/audio/speech/CQCC_SSL_AASIST/weights \
              /app/app/ai_pipeline/audio/singing/AASIST/weights \
              /app/app/ai_pipeline/audio/singing/LCNN/weights \
-             /app/app/ai_pipeline/audio/common/RawNet3/weights && \
+             /app/app/ai_pipeline/audio/common/RawNet3/weights \
+             /app/app/ai_pipeline/audio/yamnet/weights && \
     # c2patool 관련 링크
     ln -s /shared_data/c2patool/anchors.pem /app/app/ai_pipeline/image/c2pa/anchors.pem && \
     ln -s /shared_data/c2patool/c2patool /app/app/ai_pipeline/image/c2pa/c2patool && \
@@ -65,7 +66,9 @@ RUN mkdir -p /app/app/ai_pipeline/image/c2pa \
     # 가창 트랙 모델 가중치 링크
     ln -s /shared_data/heimdall-singing-pth/AASIST_singing.pth /app/app/ai_pipeline/audio/singing/AASIST/weights/AASIST_singing.pth && \
     ln -s /shared_data/heimdall-singing-pth/LFCC-LCNN_singing.pth /app/app/ai_pipeline/audio/singing/LCNN/weights/LFCC-LCNN_singing.pth && \
-    ln -s /shared_data/heimdall-singing-pth/RawNet3_singing.pth /app/app/ai_pipeline/audio/common/RawNet3/weights/RawNet3_singing.pth
+    ln -s /shared_data/heimdall-singing-pth/RawNet3_singing.pth /app/app/ai_pipeline/audio/common/RawNet3/weights/RawNet3_singing.pth && \
+    # YAMNet Type 판별(음성/가창/예외 자동 라우팅) 가중치 링크
+    ln -s /shared_data/heimdall-yamnet/yamnet.tflite /app/app/ai_pipeline/audio/yamnet/weights/yamnet.tflite
 
 # 9. c2patool 실행 권한은 init.sh 의 `chmod -R 777 /shared_data` 가 부여한다.
 #    (빌드 시점에는 심볼릭 링크의 대상 파일이 아직 없어 chmod 가 실패한다)

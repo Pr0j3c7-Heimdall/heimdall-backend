@@ -41,7 +41,7 @@ class ModelResultSchema(BaseModel):
 class AudioDetectionResultData(BaseModel):
     audio_id: int = Field(..., description="Audio ID")
     audio_url: str = Field(..., description="Original audio URL")
-    track: str = Field(..., description="Analysis track (speech or singing)")
+    track: Optional[str] = Field(None, description="분석 트랙 (speech 또는 singing). C2PA로 모델 판별을 건너뛴 경우 null")
     final_is_ai: Optional[bool] = Field(None, description="Final determination if the audio is AI-generated")
     final_ai_probability: Optional[float] = Field(None, description="Final probability that the audio is AI-generated")
     completed_at: Optional[datetime] = Field(None, description="Time when the analysis was completed")

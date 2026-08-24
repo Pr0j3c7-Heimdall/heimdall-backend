@@ -5,8 +5,9 @@ AASIST(plain), RawNet3, LFCC-LCNN 3개 모델을 앙상블(simple_mean)하여 �
 speech_pipeline.py와 동일한 설계 — 모델별 raw_score를 Platt scaling으로 보정한 뒤,
 fusion JSON의 "method"에 따라 결합한다(공용 로직은 common/fusion_combine.py).
 
-음성(Speech) 트랙은 모델 구성이 다르고, 음성/가창을 나누는 YAMNet 라우팅도 아직 구현되지
-않아(임계값 미확정) 이 파이프라인은 현재 가창 트랙만 다룬다.
+음성(Speech) 트랙은 모델 구성이 달라 별도 파이프라인(speech_pipeline.py)으로 분리했다.
+음성/가창 라우팅은 type_detection.py의 YAMNet Type 판별이 맡고, audio_detection_service.py가
+그 결과에 따라 이 파이프라인 또는 speech_pipeline.py로 분기한다.
 """
 import asyncio
 import json

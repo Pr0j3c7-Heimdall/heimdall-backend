@@ -22,9 +22,10 @@ class AudioRepository:
         self.upload_base_dir = os.path.join(settings.UPLOAD_DIR, "audio")
         os.makedirs(self.upload_base_dir, exist_ok=True)
 
-    async def save_audio_file(self, file: UploadFile, user_id: int, track: str) -> Audio:
+    async def save_audio_file(self, file: UploadFile, user_id: int) -> Audio:
         """
         오디오 파일을 로컬 파일 시스템에 저장하고 데이터베이스에 Audio 레코드를 생성함.
+        track은 아직 모름 — YAMNet Type 판별(백그라운드 분석) 완료 후 채워짐.
         """
         # 충돌 방지를 위한 고유 파일명 생성
         file_extension = Path(file.filename).suffix
@@ -48,7 +49,6 @@ class AudioRepository:
             filename=file.filename,
             filepath=file_path,
             audio_url=audio_url,
-            track=track
         )
         self.db_session.add(new_audio)
         await self.db_session.flush()

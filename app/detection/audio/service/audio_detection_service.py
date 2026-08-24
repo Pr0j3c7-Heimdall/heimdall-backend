@@ -6,6 +6,7 @@ from ..model.audio_final_detection_results import AudioAnalysisStatus
 from app.ai_pipeline.audio.speech_pipeline import run_speech_detection
 from app.ai_pipeline.audio.singing_pipeline import run_singing_detection
 from app.ai_pipeline.audio.audio_c2pa import run_c2pa_analysis
+from app.ai_pipeline.audio.type_detection import classify_audio_type
 
 from datetime import datetime, timezone
 import logging
@@ -82,11 +83,11 @@ class AudioDetectionService:
             models=model_results
         )
 
-    async def run_ai_detection(self, audio_id: int, audio_path: str, track: str):
+    async def run_ai_detection(self, audio_id: int, audio_path: str):
         """
-        AI 분석 파이프라인(음성/가창 트랙)을 실행하고 결과를 DB에 반영합니다.
+        AI 분석 파이프라인(C2PA -> YAMNet Type 판별 -> 음성/가창 트랙)을 실행하고 결과를 DB에 반영합니다.
         """
-        logging.info(f"DEBUG: Starting AI detection for audio ID: {audio_id} (track={track})")
+        logging.info(f"DEBUG: Starting AI detection for audio ID: {audio_id}")
 
         # 1단계: C2PA 검증 (이미지 파이프라인과 동일한 위치·의미)
         async with AsyncSessionLocal() as session:
@@ -115,12 +116,31 @@ class AudioDetectionService:
             logging.info(f"DEBUG: AI detection COMPLETED for audio ID: {audio_id} (C2PA)")
             return
 
-        # 2단계: 트랙별 모델 판별
+        # 2단계: YAMNet Type 판별 (음성/가창/예외)
         async with AsyncSessionLocal() as session:
             repo = AudioDetectionRepository(session)
             await repo.update_analysis_status(audio_id=audio_id, status=AudioAnalysisStatus.PROCESSING)
 
-        # 트랙별 파이프라인 실행 (음성/가창 자동 라우팅은 미구현 - 업로드 시 클라이언트가 지정한 트랙을 그대로 사용)
+        track = await classify_audio_type(audio_path)
+
+        if track is None:
+            # 신뢰도·마진 조건을 만족하지 못했거나 음성/가창 어느 쪽도 아닌 것으로 확정된 예외 파일.
+            # 프레임워크의 "6) 서비스 불가"에 대응 — 모델 판별로 진행하지 않고 여기서 종료한다.
+            async with AsyncSessionLocal() as session:
+                repo = AudioDetectionRepository(session)
+                await repo.update_analysis_status(
+                    audio_id=audio_id,
+                    status=AudioAnalysisStatus.UNSUPPORTED,
+                    completed_at=datetime.now(timezone.utc)
+                )
+            logging.info(f"DEBUG: AI detection UNSUPPORTED for audio ID: {audio_id} (YAMNet type 예외)")
+            return
+
+        async with AsyncSessionLocal() as session:
+            repo = AudioDetectionRepository(session)
+            await repo.update_audio_track(audio_id=audio_id, track=track)
+
+        # 3단계: 트랙별 모델 판별
         if track == "singing":
             pipeline_result = await run_singing_detection(audio_path)
             model_list = pipeline_result["singing_list"]

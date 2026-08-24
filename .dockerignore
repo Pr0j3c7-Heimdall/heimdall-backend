@@ -70,6 +70,7 @@
 
 # ----- AI 가중치 (compose의 init 서비스가 heimdall-vol에 받고, Dockerfile은 심볼릭 링크만 건다) -----
 **/*.pth
+**/*.tflite
 
 # ----- C2PA에 필요한 파일들 -----
 **/*.pem

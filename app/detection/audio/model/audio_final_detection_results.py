@@ -8,6 +8,8 @@ class AudioAnalysisStatus(str, Enum):
     C2PA_PROCESSING = "C2PA_PROCESSING"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
+    # YAMNet Type 판별 결과 음성/가창 어느 쪽으로도 확정되지 않은 예외 파일 (프레임워크의 "6) 서비스 불가")
+    UNSUPPORTED = "UNSUPPORTED"
 
 class AudioFinalDetectionResult(Base):
     __tablename__ = "audio_final_detection_results"

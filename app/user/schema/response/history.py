@@ -30,7 +30,7 @@ class AudioHistoryItem(BaseModel):
     audio_id: int = Field(..., description="원본 오디오(audios)의 PK")
     filename: str = Field(..., description="사용자가 업로드한 원본 파일명")
     file_type: str = Field(..., description="파일 종류 (image 또는 audio)")
-    track: str = Field(..., description="분석 트랙 (speech 또는 singing)")
+    track: Optional[str] = Field(None, description="분석 트랙 (speech 또는 singing). 예외 판정(UNSUPPORTED) 등은 null")
     analysis_status: str = Field(..., description="파이프라인 진행 상태")
     is_ai: Optional[bool] = Field(None, description="최종 AI 판별 결과")
     ai_probability: Optional[float] = Field(None, description="AI 확률 (0.0 ~ 1.0)")

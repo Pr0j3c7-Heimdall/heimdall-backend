@@ -9,10 +9,6 @@ class InvalidAudioFileException(BaseAppException):
     def __init__(self, message: str = "유효하지 않은 오디오 파일입니다. (지원 형식: wav, mp3)", code: str = "INVALID_AUDIO_FILE"):
         super().__init__(HTTP_422_UNPROCESSABLE_ENTITY, message, code)
 
-class InvalidAudioTrackException(BaseAppException):
-    def __init__(self, message: str = "유효하지 않은 track 값입니다. (speech 또는 singing)", code: str = "INVALID_AUDIO_TRACK"):
-        super().__init__(HTTP_422_UNPROCESSABLE_ENTITY, message, code)
-
 class AudioNotFoundException(BaseAppException):
     def __init__(self, message: str = "오디오를 찾을 수 없습니다.", code: str = "AUDIO_NOT_FOUND"):
         super().__init__(HTTP_404_NOT_FOUND, message, code)

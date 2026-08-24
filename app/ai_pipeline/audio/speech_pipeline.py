@@ -7,8 +7,9 @@ Platt scaling으로 보정한 뒤, fusion JSON의 "method"에 따라 결합한�
 않고 JSON에서 분기하는 이유는 heimdall-vox 쪽 K-Fold 재검증 결과에 따라 최종 방식이 이미
 한 번 바뀐 적이 있어서다(logreg_C10.0 -> soft_voting, FUSION.md 참고).
 
-가창(Singing) 트랙은 모델 구성이 다르고, 음성/가창을 나누는 YAMNet 라우팅도 아직 구현되지
-않아(임계값 미확정) 이 파이프라인은 현재 음성 트랙만 다룬다.
+가창(Singing) 트랙은 모델 구성이 달라 별도 파이프라인(singing_pipeline.py)으로 분리했다.
+음성/가창 라우팅은 type_detection.py의 YAMNet Type 판별이 맡고, audio_detection_service.py가
+그 결과에 따라 이 파이프라인 또는 singing_pipeline.py로 분기한다.
 """
 import asyncio
 import json
