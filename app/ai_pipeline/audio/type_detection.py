@@ -16,6 +16,13 @@ TFLite로 내보낸 공식 YAMNet(https://tfhub.dev/google/yamnet/1)은 TF-Hub S
   confirmed = a and b 이고, 이때 top1이 speech/singing이면 해당 트랙으로 확정한다.
   그 외(confirmed가 아니거나 top1이 other로 확정된 경우)는 모두 예외로 라우팅한다 —
   프레임워크가 성공 시 음성/가창 두 갈래로만 분기하고 실패 시 예외 하나로 합치는 것과 대응.
+
+긴 파일(노래 한 곡 등)은 WINDOW_SECONDS 단위로 잘라 구간별로 판정 규칙을 적용하고,
+한 구간이라도 confirmed면 그 트랙으로 확정한다. 900개 검증 샘플은 짧은 클립이었을
+것으로 추정되는데, 파일 전체 프레임을 그대로 평균내면 전주·
+간주 같은 비보컬 구간이 긴 실제 곡에서 보컬 구간의 점수가 희석되어 거의 항상 예외로
+빠지는 문제가 있었다(운영에서 5분대 노래가 전부 UNSUPPORTED로 판정된 것으로 확인) —
+구간 단위로 나누면 각 구간이 검증 당시의 짧은 클립과 비슷한 길이가 되어 그 문제가 없다.
 """
 import asyncio
 import csv
@@ -49,6 +56,11 @@ MIN_SAMPLES = int(0.975 * SAMPLE_RATE)
 # --- Type 판별 임계값 (heimdall-vox 900개 샘플 검증 결과) ---
 MIN_CONFIDENCE = 0.16
 MIN_MARGIN = 0.15
+
+# 검증 샘플과 비슷한 길이가 되도록 자르는 구간 크기. 이 이하 길이의 파일은 자르지 않고
+# 파일 전체를 한 구간으로 취급한다(기존 동작과 동일).
+WINDOW_SECONDS = 15
+WINDOW_SAMPLES = WINDOW_SECONDS * SAMPLE_RATE
 
 _YAMNET_DIR = os.path.dirname(os.path.abspath(__file__))
 YAMNET_TFLITE_WEIGHTS = os.path.join(_YAMNET_DIR, "yamnet", "weights", "yamnet.tflite")
@@ -357,9 +369,29 @@ def _decide(scores: Dict[str, float]) -> Optional[str]:
     return None
 
 
+def _iter_windows(waveform: np.ndarray) -> Sequence[np.ndarray]:
+    """WINDOW_SAMPLES 단위로 자른다. 파일이 한 구간보다 짧으면 전체를 그대로 한
+    구간으로 반환한다(기존 동작과 동일). 마지막 조각이 MIN_SAMPLES보다 짧으면
+    프레임 점수를 낼 수 없으므로 버린다."""
+    if waveform.size <= WINDOW_SAMPLES:
+        return [waveform]
+
+    windows = [
+        waveform[start:start + WINDOW_SAMPLES]
+        for start in range(0, waveform.size, WINDOW_SAMPLES)
+    ]
+    if windows[-1].size < MIN_SAMPLES:
+        windows.pop()
+    return windows
+
+
 def classify_audio_type_sync(audio_path: str) -> Optional[str]:
     """오디오가 speech/singing 중 무엇인지 판별한다.
-    신뢰도·마진 조건을 만족하지 못하거나 top1이 other로 확정되면 None(예외)을 반환한다."""
+    WINDOW_SECONDS 단위 구간으로 나눠 각 구간에 판정 규칙을 적용하고, 한 구간이라도
+    confirmed면(먼저 발견되는 순서로) 그 트랙으로 확정한다 — 노래 한 곡처럼 긴 파일을
+    통째로 평균내면 비보컬 구간에 실제 보컬 구간 점수가 희석되는 문제를 피하기 위함이다.
+    모든 구간이 confirmed가 아니면(신뢰도·마진 미달 또는 top1이 other) None(예외)을
+    반환한다."""
     if _interpreter is None:
         raise RuntimeError("YAMNet 모델이 로드되지 않았습니다. init_model()을 확인하세요.")
 
@@ -371,8 +403,12 @@ def classify_audio_type_sync(audio_path: str) -> Optional[str]:
     if rms < 1e-6:
         return None
 
-    scores = _score_file(waveform)
-    return _decide(scores)
+    for window in _iter_windows(waveform):
+        scores = _score_file(window)
+        decided = _decide(scores)
+        if decided is not None:
+            return decided
+    return None
 
 
 async def classify_audio_type(audio_path: str) -> Optional[str]:
