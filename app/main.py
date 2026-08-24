@@ -79,31 +79,52 @@ def _proxy_prefix(request: Request) -> str:
 
 
 @app.get("/api/v1/openapi.json", include_in_schema=False)
+@app.get("/v1/openapi.json", include_in_schema=False)
 async def openapi_json(request: Request):
     """OpenAPI 스펙 (내장 openapi_url 대체).
 
     servers를 접속 경로에 맞춰 채워 넣는다. 이 값이 없으면 Swagger UI의
     'Try it out'이 /api/v1/... 을 그대로 호출해 rewrite에 /api를 뺏기고 404가 난다.
+
+    /v1/openapi.json은 {도메인}/api/v1/openapi.json이 프론트엔드 rewrite에서
+    /api를 한 번 벗겨내며 도달하는 경로다 (아래 swagger_ui_html 참고).
     """
     schema = dict(app.openapi())  # 캐시된 스키마를 건드리지 않도록 얕은 복사
     schema["servers"] = [{"url": _proxy_prefix(request) or "/"}]
     return JSONResponse(schema)
 
 
+def _openapi_path(request: Request) -> str:
+    """지금 이 요청이 들어온 경로(접두사 /api 유무)에 대응하는 openapi.json 경로.
+
+    /api/v1/docs로 왔으면 /api/v1/openapi.json을, rewrite를 거쳐 /v1/docs로
+    왔으면 /v1/openapi.json을 가리켜야 같은 접두사 규칙으로 다시 rewrite를 통과한다.
+    """
+    return "/api/v1/openapi.json" if request.url.path.startswith("/api/") else "/v1/openapi.json"
+
+
 @app.get("/api/v1/docs", include_in_schema=False)
+@app.get("/v1/docs", include_in_schema=False)
 async def swagger_ui_html(request: Request):
-    """Swagger UI (내장 docs_url 대체)"""
+    """Swagger UI (내장 docs_url 대체).
+
+    /v1/docs는 {도메인}/api/v1/docs가 프론트엔드 rewrite('/api/:path*' ->
+    'backend:8000/:path*')에서 /api를 한 번 벗겨내며 도달하는 경로다. 직접
+    localhost:8000/api/v1/docs로 접속하는 경로(rewrite 없음)와 공존시키기 위해
+    같은 핸들러를 두 경로에 등록했다.
+    """
     return get_swagger_ui_html(
-        openapi_url=f"{_proxy_prefix(request)}/api/v1/openapi.json",
+        openapi_url=f"{_proxy_prefix(request)}{_openapi_path(request)}",
         title=f"{app.title} - Swagger UI",
     )
 
 
 @app.get("/api/v1/redoc", include_in_schema=False)
+@app.get("/v1/redoc", include_in_schema=False)
 async def redoc_html(request: Request):
-    """ReDoc (내장 redoc_url 대체)"""
+    """ReDoc (내장 redoc_url 대체). /v1/redoc 관련 설명은 swagger_ui_html 참고."""
     return get_redoc_html(
-        openapi_url=f"{_proxy_prefix(request)}/api/v1/openapi.json",
+        openapi_url=f"{_proxy_prefix(request)}{_openapi_path(request)}",
         title=f"{app.title} - ReDoc",
     )
 
