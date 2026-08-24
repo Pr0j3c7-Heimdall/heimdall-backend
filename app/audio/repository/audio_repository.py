@@ -12,8 +12,13 @@ from app.detection.audio.model.audio_final_detection_results import AudioFinalDe
 from app.config import get_image_settings
 from app.audio.exception.audio_exception import AudioNotFoundException
 from app.audio.exception.audio_exception import AudioAccessDeniedException
+from app.audio.exception.audio_exception import AudioFileTooLargeException
 
 settings = get_image_settings()
+
+# UI에 안내된 업로드 상한과 동일한 값. Content-Length 헤더는 클라이언트가
+# 위조할 수 있으므로 신뢰하지 않고, 실제로 디스크에 쓰는 바이트 수를 세어 판단한다.
+MAX_AUDIO_FILE_SIZE_BYTES = 200 * 1024 * 1024
 
 class AudioRepository:
     def __init__(self, db_session: AsyncSession):
@@ -37,10 +42,19 @@ class AudioRepository:
 
         file_path = os.path.join(user_upload_dir, unique_filename)
 
-        # 파일 저장
-        with open(file_path, "wb") as buffer:
-            while content := await file.read(1024):  # 청크 단위로 읽기
-                buffer.write(content)
+        # 파일 저장. 청크를 쓰는 동안 누적 크기를 세어 상한을 넘으면 즉시 중단한다
+        # (Content-Length는 클라이언트가 보낸 값이라 신뢰할 수 없어 실측함).
+        total_bytes = 0
+        try:
+            with open(file_path, "wb") as buffer:
+                while content := await file.read(1024 * 1024):  # 청크 단위로 읽기
+                    total_bytes += len(content)
+                    if total_bytes > MAX_AUDIO_FILE_SIZE_BYTES:
+                        raise AudioFileTooLargeException()
+                    buffer.write(content)
+        except AudioFileTooLargeException:
+            os.remove(file_path)
+            raise
 
         audio_url = f"{settings.BASE_URL}/uploads/audio/{user_id}/{unique_filename}"
 
