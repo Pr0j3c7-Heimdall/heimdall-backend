@@ -22,6 +22,7 @@ import csv
 import logging
 import math
 import os
+import threading
 from typing import Dict, List, Optional, Sequence
 
 import numpy as np
@@ -219,7 +220,16 @@ OTHER_EVENT_CLASS_NAMES = [
 ]
 
 # --- 전역 변수로 인터프리터 및 그룹 인덱스 초기화 (프로세스당 1회 로드) ---
-_signature_runner = None
+# 공개 배포된 yamnet.tflite(https://tfhub.dev/google/lite-model/yamnet/tflite/1)는
+# SignatureDef가 없는 구버전 변환본이라 get_signature_runner()를 쓸 수 없다 — 대신
+# waveform 입력 텐서를 매번 실제 길이로 resize한 뒤 원시 텐서 API로 invoke한다.
+# TFLite Interpreter 인스턴스는 스레드 안전하지 않으므로(공식 문서 명시) invoke 구간을
+# _interpreter_lock으로 직렬화한다 — classify_audio_type이 asyncio.to_thread로 여러
+# 요청을 동시에 처리할 수 있기 때문에 필요하다.
+_interpreter = None
+_input_index: Optional[int] = None
+_predictions_output_index: Optional[int] = None
+_interpreter_lock = threading.Lock()
 _speech_indices: List[int] = []
 _singing_indices: List[int] = []
 _other_instrument_indices: List[int] = []
@@ -243,7 +253,7 @@ def init_model() -> None:
     """클래스 그룹 인덱스와 TFLite 인터프리터를 초기화한다.
     가중치가 없으면(심볼릭 링크 미배치) 인터프리터는 None으로 남고,
     classify_audio_type_sync 호출 시 RuntimeError를 낸다(다른 파이프라인과 동일한 방식)."""
-    global _signature_runner
+    global _interpreter, _input_index, _predictions_output_index
     global _speech_indices, _singing_indices, _other_instrument_indices, _other_event_indices
 
     try:
@@ -268,7 +278,14 @@ def init_model() -> None:
     try:
         if os.path.exists(YAMNET_TFLITE_WEIGHTS):
             interpreter = Interpreter(model_path=YAMNET_TFLITE_WEIGHTS)
-            _signature_runner = interpreter.get_signature_runner("serving_default")
+            interpreter.allocate_tensors()
+            output_details = interpreter.get_output_details()
+            predictions_detail = next(
+                d for d in output_details if d["shape_signature"][-1] == len(class_names)
+            )
+            _input_index = interpreter.get_input_details()[0]["index"]
+            _predictions_output_index = predictions_detail["index"]
+            _interpreter = interpreter
     except Exception as e:
         logging.error(f"Error initializing YAMNet TFLite interpreter: {e}", exc_info=True)
 
@@ -296,11 +313,22 @@ def _group_frame_scores(scores: np.ndarray, indices: Sequence[int]) -> np.ndarra
     return np.max(scores[:, indices], axis=1)
 
 
+def _run_interpreter(waveform: np.ndarray) -> np.ndarray:
+    """waveform 길이에 맞춰 입력 텐서를 resize한 뒤 invoke한다. Interpreter 인스턴스는
+    스레드 안전하지 않으므로 이 구간 전체를 락으로 감싼다."""
+    with _interpreter_lock:
+        _interpreter.resize_tensor_input(_input_index, [waveform.shape[0]])
+        _interpreter.allocate_tensors()
+        _interpreter.set_tensor(_input_index, waveform)
+        _interpreter.invoke()
+        return np.array(_interpreter.get_tensor(_predictions_output_index))
+
+
 def _score_file(waveform: np.ndarray) -> Dict[str, float]:
     """speech/singing/other 파일 단위 점수를 낸다. other_instrument는 vocal(speech/singing)
     경쟁 점수를 감산한 뒤 other_event와 max를 취한다 — 반주가 포함된 가창이 악기 라벨 때문에
     other로 잘못 분류되는 것을 완화하기 위함이며, threshold 검증 당시와 동일한 로직이어야 한다."""
-    predictions = np.asarray(_signature_runner(waveform=waveform)["predictions"])
+    predictions = _run_interpreter(waveform)
 
     speech_frames = _group_frame_scores(predictions, _speech_indices)
     singing_frames = _group_frame_scores(predictions, _singing_indices)
@@ -332,7 +360,7 @@ def _decide(scores: Dict[str, float]) -> Optional[str]:
 def classify_audio_type_sync(audio_path: str) -> Optional[str]:
     """오디오가 speech/singing 중 무엇인지 판별한다.
     신뢰도·마진 조건을 만족하지 못하거나 top1이 other로 확정되면 None(예외)을 반환한다."""
-    if _signature_runner is None:
+    if _interpreter is None:
         raise RuntimeError("YAMNet 모델이 로드되지 않았습니다. init_model()을 확인하세요.")
 
     waveform = _load_waveform_16k(audio_path)
