@@ -36,6 +36,7 @@ class UserService:
                     history_id=summary.id,
                     image_id=image.id,
                     filename=image.filename,
+                    image_url=image.image_url,
                     file_type="image",
                     analysis_status=summary.analysis_status,
                     is_ai=summary.final_is_ai,
