@@ -4,6 +4,7 @@ C2PA 분석, 이진 분류(AI 여부), 다중 분류(생성 모델 판별) 프�
 """
 
 import os
+import json
 import torch
 import asyncio
 import logging
@@ -73,6 +74,9 @@ DINOV3_MULTI_WEIGHTS = "app/ai_pipeline/image/multiclass/DINOv3/weights/DINOv3_m
 F3NET_MULTI_WEIGHTS = "app/ai_pipeline/image/multiclass/F3Net/weights/F3Net_multi.pth"
 UNET_MULTI_WEIGHTS = "app/ai_pipeline/image/multiclass/UNet/weights/UNet_multi.pth"
 
+# heimdall-image 리포지토리에서 검증 정확도 기반으로 산출한 이진분류 Soft Voting 가중치
+_BINARY_FUSION_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fusion", "binary_fusion.json")
+
 # --- 전역 변수로 모델 인스턴스 초기화 ---
 dinov3_detector = None
 f3net_detector = None
@@ -80,12 +84,25 @@ unet_detector = None
 dinov3_multi_detector = None
 f3net_multi_detector = None
 unet_multi_detector = None
+_binary_fusion: Optional[Dict[str, Any]] = None
+
+
+def _load_binary_fusion() -> Dict[str, Any]:
+    with open(_BINARY_FUSION_JSON, encoding="utf-8") as f:
+        return json.load(f)
+
 
 def init_models():
     """가중치 파일 존재 여부를 확인하여 각 AI 모델 인스턴스를 초기화합니다."""
     global dinov3_detector, f3net_detector, unet_detector, \
-           dinov3_multi_detector, f3net_multi_detector, unet_multi_detector
-    
+           dinov3_multi_detector, f3net_multi_detector, unet_multi_detector, \
+           _binary_fusion
+
+    try:
+        _binary_fusion = _load_binary_fusion()
+    except Exception as e:
+        logging.error(f"Error loading binary_fusion.json: {e}", exc_info=True)
+
     # 1. Binary DINOv3
     try:
         if Dinov3BinaryDetector and os.path.exists(DINOV3_WEIGHTS):
@@ -153,32 +170,36 @@ async def run_c2pa_analysis(image_path: str) -> Dict[str, Any]:
         "visible_watermark_digital_source_type": None
     }
 
+_BINARY_DETECTOR_NAMES = {
+    "DINOv3": lambda: dinov3_detector,
+    "F3-Net": lambda: f3net_detector,
+    "UNet": lambda: unet_detector,
+}
+
+
 async def run_binary_detection(image_path: str) -> Dict[str, Any]:
-    """DINOv3, F3-Net, UNet 모델을 통해 이미지의 AI 생성 여부를 판정합니다."""
+    """DINOv3, F3-Net, UNet 모델을 실행해 confidence_score를 구하고,
+    binary_fusion.json의 고정 가중치(Soft Voting)로 결합해 최종 판정을 낸다."""
+    if _binary_fusion is None:
+        raise RuntimeError("binary_fusion.json이 로드되지 않았습니다. init_models()를 확인하세요.")
+
+    order = _binary_fusion["models"]
+    missing = [name for name in order if _BINARY_DETECTOR_NAMES[name]() is None]
+    if missing:
+        raise RuntimeError(f"다음 모델의 가중치가 로드되지 않았습니다: {missing}")
+
     results = []
-    
-    # 1. DINOv3 실행
-    if dinov3_detector:
-        res_dino = await asyncio.to_thread(dinov3_detector.predict, image_path)
-        results.append(res_dino)
-    
-    # 2. F3-Net 실행
-    if f3net_detector:
-        res_f3 = await asyncio.to_thread(f3net_detector.predict, image_path)
-        results.append(res_f3)
+    raw_scores: Dict[str, float] = {}
+    for name in order:
+        detector = _BINARY_DETECTOR_NAMES[name]()
+        res = await asyncio.to_thread(detector.predict, image_path)
+        results.append(res)
+        raw_scores[name] = res["confidence_score"]
 
-    # 3. UNet 실행
-    if unet_detector:
-        res_unet = await asyncio.to_thread(unet_detector.predict, image_path)
-        results.append(res_unet)
-    
-    if not results:
-        return {"binary_list": [], "avg_ai_prob": 0.0, "final_is_ai": False}
-
-    # 평균 점수 기반 최종 판정 (Threshold: 0.5)
-    avg_ai_prob = sum(r["confidence_score"] for r in results) / len(results)
+    weights = _binary_fusion["weights"]
+    avg_ai_prob = sum(weights[name] * raw_scores[name] for name in order)
     final_is_ai = avg_ai_prob >= 0.5
-    
+
     return {
         "binary_list": results,
         "avg_ai_prob": avg_ai_prob,
