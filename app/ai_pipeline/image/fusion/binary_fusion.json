@@ -1,0 +1,10 @@
+{
+  "method": "fixed_weighted",
+  "track": "image_binary",
+  "models": ["DINOv3", "F3-Net", "UNet"],
+  "weights": {
+    "DINOv3": 0.3495,
+    "F3-Net": 0.4628,
+    "UNet": 0.1877
+  }
+}
