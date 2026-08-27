@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -17,6 +18,7 @@ from app.user.model import User, UserStatus
 from app.user.repository import UserRepository
 from app.auth.schema import LoginRequest, LogoutRequest, RefreshRequest
 from app.config import get_auth_settings
+logger = logging.getLogger(__name__)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
 REFRESH_TOKEN_EXPIRE_DAYS = 14
@@ -41,9 +43,11 @@ def _verify_google_token(id_token_str: str) -> dict | None:
             id_token_str,
             google_requests.Request(),
             settings.GOOGLE_CLIENT_ID,
+            clock_skew_in_seconds=10,
         )
         return payload
-    except ValueError:
+    except ValueError as e:
+        logger.warning(f"Google ID token verification failed: {e}")
         return None
 
 
